@@ -40,6 +40,27 @@ export async function teacherSectionIds(userId: string): Promise<string[]> {
   return Array.from(new Set([...assignments.map((a) => a.sectionId), ...taken.map((s) => s.id)]));
 }
 
+/** The (section, subject) pairs a teacher is assigned to teach. */
+export async function teacherSubjectPairs(userId: string): Promise<{ sectionId: string; subjectId: string }[]> {
+  const teacherId = await getTeacherId(userId);
+  if (!teacherId) return [];
+  const rows = await prisma.classAssignment.findMany({ where: { teacherId } });
+  const seen = new Set<string>();
+  return rows
+    .map((r) => ({ sectionId: r.sectionId, subjectId: r.subjectId }))
+    .filter((p) => !seen.has(p.sectionId + ":" + p.subjectId) && seen.add(p.sectionId + ":" + p.subjectId));
+}
+
+/**
+ * Prisma `where` fragment limiting a record (anything with sectionId +
+ * subjectId) to what this teacher actually teaches. A teacher in the same
+ * section who teaches a DIFFERENT subject must not see these rows.
+ */
+export async function teacherTeachingWhere(userId: string) {
+  const pairs = await teacherSubjectPairs(userId);
+  return pairs.length ? { OR: pairs } : { id: "__none__" };
+}
+
 /** True when the teacher is assigned to teach `subjectId` in `sectionId`. */
 export async function teacherTeachesSubjectInSection(userId: string, sectionId: string, subjectId: string) {
   const teacherId = await getTeacherId(userId);

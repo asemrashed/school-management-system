@@ -33,6 +33,13 @@ export async function submitAttendance(req: Request, res: Response) {
 export async function getAttendance(req: Request, res: Response) {
   const { sectionId, date } = attendanceQuerySchema.parse(req.query);
   await assertSectionAccess(req.user!, sectionId);
+  // Only the delegated taker (not every teacher of the section) reads attendance.
+  if (req.user!.role === "teacher") {
+    const taker = await attendanceService.resolveAttendanceTaker(sectionId);
+    if (!taker || taker.userId !== req.user!.id) {
+      throw AppError.forbidden("You are not the assigned attendance taker for this section.");
+    }
+  }
   const items = await attendanceService.listAttendance(sectionId, date);
   res.json({ items });
 }

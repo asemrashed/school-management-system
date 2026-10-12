@@ -30,6 +30,15 @@ async function assertTeachesSection(req: Request, sectionId: string, subjectId: 
   }
 }
 
+/** A teacher may only read/grade submissions of assignments they created. */
+async function assertOwnsAssignment(req: Request, a: { sectionId: string; subjectId: string; teacherId: string }) {
+  await assertTeachesSection(req, a.sectionId, a.subjectId);
+  if (req.user!.role === "teacher") {
+    const teacherId = await getTeacherId(req.user!.id);
+    if (!teacherId || a.teacherId !== teacherId) throw AppError.forbidden("This assignment belongs to another teacher.");
+  }
+}
+
 // --- Resources ---
 
 function toResourceDto(row: {
@@ -65,11 +74,14 @@ function toResourceDto(row: {
 export async function listResources(req: Request, res: Response) {
   const requested = typeof req.query.sectionId === "string" ? req.query.sectionId : undefined;
   const sectionId = await resolveSectionFilter(req.user!, requested);
+  // A teacher sees only the resources THEY uploaded, never a colleague's.
+  const ownTeacherId = req.user!.role === "teacher" ? ((await getTeacherId(req.user!.id)) ?? "__none__") : null;
 
   const rows = await prisma.resource.findMany({
     where: {
       deletedAt: null,
       ...(sectionId ? { sectionId } : {}),
+      ...(ownTeacherId ? { teacherId: ownTeacherId } : {}),
       // Rule: no resource visible to parent/student until published (lms-domain.md).
       ...(isGuardianRole(req.user!) ? { publishedAt: { not: null } } : {}),
     },
@@ -159,8 +171,11 @@ export async function listAssignments(req: Request, res: Response) {
   const requested = typeof req.query.sectionId === "string" ? req.query.sectionId : undefined;
   const sectionId = await resolveSectionFilter(req.user!, requested);
 
+  // A teacher sees only the assignments THEY created.
+  const ownTeacherId = req.user!.role === "teacher" ? ((await getTeacherId(req.user!.id)) ?? "__none__") : null;
+
   const rows = await prisma.assignment.findMany({
-    where: { deletedAt: null, ...(sectionId ? { sectionId } : {}) },
+    where: { deletedAt: null, ...(sectionId ? { sectionId } : {}), ...(ownTeacherId ? { teacherId: ownTeacherId } : {}) },
     include: { subject: true, section: true, teacher: { include: { user: true } } },
     orderBy: { dueAt: "asc" },
   });
@@ -243,7 +258,7 @@ export async function listSubmissions(req: Request, res: Response) {
     return res.json({ items: rows.map(toSubmissionDto) });
   }
 
-  await assertTeachesSection(req, assignment.sectionId, assignment.subjectId);
+  await assertOwnsAssignment(req, assignment);
   const rows = await prisma.submission.findMany({
     where: { assignmentId },
     include: { student: { include: { user: true } } },
@@ -282,7 +297,7 @@ export async function gradeSubmission(req: Request, res: Response) {
     include: { assignment: true },
   });
   if (!existing) throw AppError.notFound("Submission not found.");
-  await assertTeachesSection(req, existing.assignment.sectionId, existing.assignment.subjectId);
+  await assertOwnsAssignment(req, existing.assignment);
 
   // NOTE: publishing a grade doesn't send a notification yet — there's no
   // dedicated messaging-domain.md category for it (assignment_posted covers

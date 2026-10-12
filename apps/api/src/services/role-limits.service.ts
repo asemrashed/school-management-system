@@ -12,22 +12,7 @@ import { AppError } from "../lib/errors";
  * blocks new accounts until the count drops.
  */
 
-type RoleAccountLimitDelegate = {
-  findUnique(args: { where: { role: Role } }): Promise<{ maxAccounts: number } | null>;
-  findMany(): Promise<Array<{ role: Role; maxAccounts: number }>>;
-  deleteMany(args: { where: { role: Role } }): Promise<unknown>;
-  upsert(args: {
-    where: { role: Role };
-    update: { maxAccounts: number };
-    create: { role: Role; maxAccounts: number };
-  }): Promise<unknown>;
-};
-type Db = Pick<Prisma.TransactionClient, "user"> & {
-  roleAccountLimit?: RoleAccountLimitDelegate;
-};
-
-const roleAccountLimits = (db: unknown): RoleAccountLimitDelegate | undefined =>
-  (db as { roleAccountLimit?: RoleAccountLimitDelegate }).roleAccountLimit;
+type Db = Pick<Prisma.TransactionClient, "user" | "roleAccountLimit">;
 
 const countActive = (db: Db, role: Role) => db.user.count({ where: { role, isActive: true, deletedAt: null } });
 
@@ -45,9 +30,7 @@ export function mapSerializationError(err: unknown): never {
 
 /** Pass the transaction client when creating the user in the same transaction. */
 export async function assertRoleCapacity(role: Role, db: Db = prisma): Promise<void> {
-  const limits = roleAccountLimits(db);
-  if (!limits) return;
-  const limit = await limits.findUnique({ where: { role } });
+  const limit = await db.roleAccountLimit.findUnique({ where: { role } });
   if (!limit) return;
   const active = await countActive(db, role);
   if (active >= limit.maxAccounts) {
@@ -61,9 +44,8 @@ export async function assertRoleCapacity(role: Role, db: Db = prisma): Promise<v
 }
 
 export async function listRoleAccountLimits(): Promise<RoleAccountLimitRow[]> {
-  const limits = roleAccountLimits(prisma);
-  const rows = limits ? await limits.findMany() : [];
-  const byRole = new Map(rows.map((l) => [l.role, l.maxAccounts]));
+  const limits = await prisma.roleAccountLimit.findMany();
+  const byRole = new Map(limits.map((l) => [l.role, l.maxAccounts]));
   return Promise.all(
     ROLES.map(async (role) => ({
       role,
@@ -74,15 +56,11 @@ export async function listRoleAccountLimits(): Promise<RoleAccountLimitRow[]> {
 }
 
 export async function setRoleAccountLimit(role: Role, maxAccounts: number | null): Promise<void> {
-  const limits = roleAccountLimits(prisma);
-  if (!limits) {
-    throw AppError.badRequest("ROLE_LIMITS_UNAVAILABLE", "Role account limits are not available. Regenerate Prisma Client and run migrations.");
-  }
   if (maxAccounts === null) {
-    await limits.deleteMany({ where: { role } });
+    await prisma.roleAccountLimit.deleteMany({ where: { role } });
     return;
   }
-  await limits.upsert({
+  await prisma.roleAccountLimit.upsert({
     where: { role },
     update: { maxAccounts },
     create: { role, maxAccounts },

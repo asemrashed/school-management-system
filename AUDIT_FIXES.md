@@ -75,3 +75,17 @@ Honest limits:
   and editing the website headline showing on the public home. Not browser-tested: SSLCommerz, email delivery, uploads, mobile layouts.
 - The coordinator role lands on the teacher page; the admissions UI lives on the Admin page (Super Admin / Admin only), although the API allows coordinators.
 - `multer@1.x` upgrade, list pagination, and the unused `Permission` matrix from the list above are still open.
+
+## CSRF + build fixes
+- Web client now clears its cached CSRF token after login/logout/register/password-reset and retries once on `CSRF_INVALID` (token is bound to the session cookie, so a pre-login token was rejected for every create/update).
+- `npm run build:api` runs `prisma generate` first; `start` runs via tsx (workspace packages ship TS).
+- Existing DB: run `npm run prisma:generate`, `npm run prisma:migrate` (creates an incremental migration), then `npm run prisma:seed`.
+
+## Part 1 — teacher authorization
+Teachers were scoped by *section*, so two teachers of one section saw each other's work. Now:
+- Assignments and resources: a teacher lists only rows they created (`teacherId`).
+- Submissions: list/grade only for own assignments.
+- Exams, marks, publish: only (section, subject) pairs the teacher is assigned to.
+- Student performance: a teacher sees only results for subjects they teach.
+- Attendance read: only the delegated attendance taker.
+- Admin-tier roles and students/parents are unchanged. Test: `tests/19-teacher-scope.test.ts`.

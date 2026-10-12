@@ -14,6 +14,7 @@ import {
   ownStudentIds,
   resolveSectionFilter,
   teacherTeachesSubjectInSection,
+  teacherTeachingWhere,
 } from "../lib/scope";
 import * as examsService from "../services/exams.service";
 
@@ -56,10 +57,13 @@ export async function listExams(req: Request, res: Response) {
   const requested = typeof req.query.sectionId === "string" ? req.query.sectionId : undefined;
   const sectionId = await resolveSectionFilter(req.user!, requested);
   const guardian = isGuardianRole(req.user!);
+  // Teachers see only exams for subjects they teach in that section.
+  const teaching = req.user!.role === "teacher" ? await teacherTeachingWhere(req.user!.id) : {};
 
   const rows = await prisma.exam.findMany({
     where: {
       deletedAt: null,
+      ...teaching,
       ...(sectionId ? { sectionId } : {}),
       ...(guardian ? { publishedAt: { not: null } } : {}),
     },

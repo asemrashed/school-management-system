@@ -10,7 +10,7 @@ import type {
   ChooseOtpChannelInput,
   VerifyPasswordResetInput,
 } from "@packages/shared-types";
-import { apiClient, clearCsrfToken } from "../api-client";
+import { apiClient } from "../api-client";
 
 const SESSION_KEY = ["auth", "session"] as const;
 
@@ -27,7 +27,6 @@ export function useLogin() {
     mutationFn: (input: LoginInput) =>
       apiClient<{ user: SessionUser }>("/auth/login", { method: "POST", body: input }),
     onSuccess: (data) => {
-      clearCsrfToken();
       queryClient.setQueryData(SESSION_KEY, { user: data.user });
     },
   });
@@ -39,7 +38,6 @@ export function useRegister() {
     mutationFn: (input: RegisterInput) =>
       apiClient<{ user: SessionUser }>("/auth/register", { method: "POST", body: input }),
     onSuccess: (data) => {
-      clearCsrfToken();
       queryClient.setQueryData(SESSION_KEY, { user: data.user });
     },
   });
@@ -50,7 +48,6 @@ export function useLogout() {
   return useMutation({
     mutationFn: () => apiClient<void>("/auth/logout", { method: "POST" }),
     onSuccess: () => {
-      clearCsrfToken();
       queryClient.setQueryData(SESSION_KEY, { user: null });
       queryClient.invalidateQueries();
     },

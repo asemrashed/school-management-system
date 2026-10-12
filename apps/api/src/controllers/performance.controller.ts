@@ -2,7 +2,7 @@ import type { Request, Response } from "express";
 import type { ChildSummaryDto, PerformanceDto } from "@packages/shared-types";
 import { prisma } from "../lib/prisma";
 import { AppError } from "../lib/errors";
-import { assertSectionAccess, assertStudentAccess, isGuardianRole, ownStudentIds } from "../lib/scope";
+import { assertSectionAccess, assertStudentAccess, isGuardianRole, ownStudentIds, teacherTeachingWhere } from "../lib/scope";
 
 const round1 = (n: number) => Math.round(n * 10) / 10;
 
@@ -40,10 +40,12 @@ export async function getStudentPerformance(req: Request, res: Response) {
   else if (student.sectionId) await assertSectionAccess(req.user!, student.sectionId);
   else if (req.user!.role === "teacher") throw AppError.forbidden();
 
+  // A teacher only sees results of the subjects they teach, not a colleague's.
+  const teaching = req.user!.role === "teacher" ? await teacherTeachingWhere(req.user!.id) : {};
   const [attendance, marks, submissions] = await Promise.all([
     prisma.attendance.findMany({ where: { studentId: id } }),
     prisma.mark.findMany({
-      where: { studentId: id, exam: { publishedAt: { not: null }, deletedAt: null } },
+      where: { studentId: id, exam: { publishedAt: { not: null }, deletedAt: null, ...teaching } },
       include: { exam: { include: { subject: true } } },
     }),
     prisma.submission.findMany({ where: { studentId: id } }),

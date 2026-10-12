@@ -51,34 +51,27 @@ export async function createUser(req: Request, res: Response) {
     throw AppError.forbidden("Only a Super Admin can create another Super Admin account.");
   }
 
-  try {
-    const existing = await prisma.user.findUnique({ where: { email: input.email } });
-    if (existing) throw AppError.conflict("An account with this email already exists.");
+  const existing = await prisma.user.findUnique({ where: { email: input.email } });
+  if (existing) throw AppError.conflict("An account with this email already exists.");
 
-    const passwordHash = await bcrypt.hash(input.password, 12);
-    const user = await prisma
-      .$transaction(async (tx) => {
-        await assertRoleCapacity(input.role, tx);
-        const created = await tx.user.create({
-          data: { name: input.name, email: input.email, role: input.role, passwordHash },
-        });
-        await createRoleProfile(tx, created.id, created.role);
-        return created;
-      }, SERIALIZABLE)
-      .catch(mapSerializationError);
+  const passwordHash = await bcrypt.hash(input.password, 12);
+  const user = await prisma
+    .$transaction(async (tx) => {
+      await assertRoleCapacity(input.role, tx);
+      const created = await tx.user.create({
+        data: { name: input.name, email: input.email, role: input.role, passwordHash },
+      });
+      await createRoleProfile(tx, created.id, created.role);
+      return created;
+    }, SERIALIZABLE)
+    .catch(mapSerializationError);
 
-    await notify({
-      category: "registration_credentials",
-      recipientEmail: user.email,
-      subject: "Your school portal account",
-      html: `<p>Hi ${user.name},</p><p>An account was created for you with role <strong>${user.role}</strong>. Use "Forgot password" to set your password.</p>`,
-    });
+  await notify({
+    category: "registration_credentials",
+    recipientEmail: user.email,
+    subject: "Your school portal account",
+    html: `<p>Hi ${user.name},</p><p>An account was created for you with role <strong>${user.role}</strong>. Use "Forgot password" to set your password.</p>`,
+  });
 
-    return res.status(201).json({ user: toDto(user) });
-  } catch (err) {
-    // Log full error for debugging (dev only)
-    // eslint-disable-next-line no-console
-    console.error("[createUser error]", err instanceof Error ? err.stack ?? err.message : err);
-    throw err;
-  }
+  res.status(201).json({ user: toDto(user) });
 }
