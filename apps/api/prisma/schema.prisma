@@ -1,0 +1,958 @@
+// Prisma schema v1 — Phase 1 (Foundation)
+// Single-school BD English-Medium SMS. See /db-schema.md for the domain map.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------------------
+// Enums
+// ---------------------------------------------------------------------------
+
+enum RoleName {
+  super_admin
+  admin
+  coordinator
+  teacher
+  accountant
+  librarian
+  parent
+  student
+}
+
+enum PermissionAction {
+  read
+  write
+}
+
+enum OtpChannel {
+  email
+  sms
+}
+
+enum MessageCategory {
+  registration_credentials
+  absence_alert
+  fee_due
+  exam_schedule
+  result_published
+  assignment_posted
+  general_notice
+  password_reset
+}
+
+enum AttendanceStatus {
+  present
+  absent
+  late
+  excused
+}
+
+enum InvoiceStatus {
+  unpaid
+  partial
+  paid
+  overdue
+}
+
+enum PaymentMethod {
+  cash
+  bkash
+  nagad
+  sslcommerz
+}
+
+enum NoticeAudience {
+  all
+  parents
+  teachers
+  students
+  staff
+}
+
+enum TicketStatus {
+  open
+  in_progress
+  resolved
+}
+
+enum ResourceKind {
+  pdf
+  video
+  slides
+  recorded_class
+  live_link
+  past_paper
+  notes
+  other
+}
+
+enum ExamType {
+  online
+  offline
+}
+
+enum PageStatus {
+  draft
+  review
+  published
+}
+
+// ---------------------------------------------------------------------------
+// Core: identity, school structure
+// ---------------------------------------------------------------------------
+
+model School {
+  id        String   @id @default(cuid())
+  name      String
+  address   String?
+  campuses  Campus[]
+  classes   Class[]
+  shifts    Shift[]
+  academicYears AcademicYear[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime?
+}
+
+model Campus {
+  id        String     @id @default(cuid())
+  name      String
+  school    School     @relation(fields: [schoolId], references: [id])
+  schoolId  String
+  buildings Building[]
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  deletedAt DateTime?
+
+  @@index([schoolId])
+}
+
+model Building {
+  id        String   @id @default(cuid())
+  name      String
+  campus    Campus   @relation(fields: [campusId], references: [id])
+  campusId  String
+  rooms     Room[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime?
+
+  @@index([campusId])
+}
+
+model Room {
+  id         String    @id @default(cuid())
+  name       String
+  capacity   Int?
+  /// Buildings are optional — a small school can add rooms without any.
+  building   Building? @relation(fields: [buildingId], references: [id])
+  buildingId String?
+  sections   Section[]
+  classAssignments ClassAssignment[]
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  deletedAt  DateTime?
+
+  @@index([buildingId])
+}
+
+model Shift {
+  id        String   @id @default(cuid())
+  name      String
+  school    School   @relation(fields: [schoolId], references: [id])
+  schoolId  String
+  classes   Class[]
+  classAssignments ClassAssignment[]
+  feeStructures    FeeStructure[]
+  periods   Period[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime?
+
+  @@index([schoolId])
+}
+
+model Class {
+  id        String    @id @default(cuid())
+  name      String
+  school    School    @relation(fields: [schoolId], references: [id])
+  schoolId  String
+  shift     Shift     @relation(fields: [shiftId], references: [id])
+  shiftId   String
+  sections  Section[]
+  subjects         Subject[]
+  feeStructures    FeeStructure[]
+  classAssignments ClassAssignment[]
+  resources        Resource[]
+  admissionApplications AdmissionApplication[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@index([schoolId])
+  @@index([shiftId])
+}
+
+model Section {
+  id        String    @id @default(cuid())
+  name      String
+  class     Class     @relation(fields: [classId], references: [id])
+  classId   String
+  room      Room?     @relation(fields: [roomId], references: [id])
+  roomId    String?
+  students  Student[]
+  /// Admin override of who takes attendance for this section. Falls back to
+  /// the section's first ClassAssignment.teacher when unset (lms-domain.md).
+  attendanceTaker   Teacher? @relation(fields: [attendanceTakerId], references: [id])
+  attendanceTakerId String?
+  classAssignments  ClassAssignment[]
+  attendanceRecords Attendance[]
+  resources         Resource[]
+  homeworkAssignments Assignment[]
+  exams             Exam[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@index([classId])
+  @@index([roomId])
+  @@index([attendanceTakerId])
+}
+
+// ---------------------------------------------------------------------------
+// Identity & RBAC
+// ---------------------------------------------------------------------------
+
+model User {
+  id            String    @id @default(cuid())
+  name          String
+  email         String    @unique
+  passwordHash  String
+  role          RoleName
+  isActive      Boolean   @default(true)
+  lastLoginAt   DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  deletedAt     DateTime?
+
+  sessions          Session[]
+  passwordResetOtps PasswordResetOtp[]
+  teacherProfile    Teacher?
+  staffProfile      Staff?
+  guardianProfile   Guardian?
+  studentProfile    Student?
+  noticesCreated    Notice[]
+  ticketsCreated    InquiryTicket[]
+  ticketMessages    TicketMessage[]
+  salaries          Salary[]
+  bookIssues        BookIssue[]
+  bookPurchases     BookSale[]
+  pagesCreated      Page[]
+
+  @@index([role])
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  user      User     @relation(fields: [userId], references: [id])
+  userId    String
+  expiresAt DateTime
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+/// Grants a (role, module, action) triple. Super Admin manages this matrix
+/// at runtime (see auth-rbac-matrix.md). Absence of a row = denied.
+model Permission {
+  id       String            @id @default(cuid())
+  role     RoleName
+  module   String
+  action   PermissionAction
+  allowed  Boolean           @default(true)
+
+  @@unique([role, module, action])
+  @@index([role])
+}
+
+// ---------------------------------------------------------------------------
+// People
+// ---------------------------------------------------------------------------
+
+model Teacher {
+  id         String    @id @default(cuid())
+  user       User      @relation(fields: [userId], references: [id])
+  userId     String    @unique
+  phone      String?
+  subject    String?
+  /// Public-website profile, edited by an admin under Website -> Teachers.
+  designation   String?
+  bio           String?
+  photoUrl      String?
+  showOnWebsite Boolean @default(false)
+  websiteOrder  Int     @default(0)
+  joinedAt   DateTime  @default(now())
+  classAssignments   ClassAssignment[]
+  attendanceForSections Section[]
+  attendanceTaken    Attendance[]
+  resourcesCreated   Resource[]
+  assignmentsCreated Assignment[]
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  deletedAt  DateTime?
+}
+
+model Staff {
+  id         String    @id @default(cuid())
+  user       User      @relation(fields: [userId], references: [id])
+  userId     String    @unique
+  designation String?
+  phone      String?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  deletedAt  DateTime?
+}
+
+model Guardian {
+  id        String    @id @default(cuid())
+  user      User      @relation(fields: [userId], references: [id])
+  userId    String    @unique
+  phone     String?
+  students  Student[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+}
+
+model Student {
+  id          String    @id @default(cuid())
+  user        User      @relation(fields: [userId], references: [id])
+  userId      String    @unique
+  rollNumber  String?
+  /// Auto-generated at admission, e.g. "2026-0007". Never typed by hand.
+  studentCode String?   @unique
+  dateOfBirth DateTime? @db.Date
+  gender      String?
+  address     String?
+  section     Section?  @relation(fields: [sectionId], references: [id])
+  sectionId   String?
+  guardian    Guardian? @relation(fields: [guardianId], references: [id])
+  guardianId  String?
+  admittedAt  DateTime  @default(now())
+  attendanceRecords Attendance[]
+  invoices          Invoice[]
+  submissions       Submission[]
+  marks             Mark[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+
+  @@index([sectionId])
+  @@index([guardianId])
+}
+
+// ---------------------------------------------------------------------------
+// Auth: password reset OTP
+// ---------------------------------------------------------------------------
+
+/// Never store the raw OTP — only a hash (see db-schema.md).
+model PasswordResetOtp {
+  id          String     @id @default(cuid())
+  user        User       @relation(fields: [userId], references: [id])
+  userId      String
+  codeHash    String
+  channel     OtpChannel?
+  expiresAt   DateTime
+  attempts    Int        @default(0)
+  consumedAt  DateTime?
+  createdAt   DateTime   @default(now())
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+// ---------------------------------------------------------------------------
+// Messaging (see messaging-domain.md)
+// ---------------------------------------------------------------------------
+
+/// Super Admin runtime toggle for per-category SMS. Effective availability
+/// = env SMS_GATEWAY AND this row's smsEnabled (messaging-domain.md).
+model MessagingFeatureToggle {
+  id         String          @id @default(cuid())
+  category   MessageCategory @unique
+  smsEnabled Boolean         @default(false)
+  updatedAt  DateTime        @updatedAt
+}
+
+// ---------------------------------------------------------------------------
+// Phase 2 — Operations
+// ---------------------------------------------------------------------------
+
+model Subject {
+  id        String   @id @default(cuid())
+  name      String
+  class     Class    @relation(fields: [classId], references: [id])
+  classId   String
+  assignments ClassAssignment[]
+  resources     Resource[]
+  homeworks     Assignment[]
+  exams         Exam[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime?
+
+  @@index([classId])
+}
+
+/// shift + class + section + subject + room + instructor, in one row
+/// (MASTER_PLAN.md Phase 2: Class assignment).
+model ClassAssignment {
+  id        String   @id @default(cuid())
+  shift     Shift    @relation(fields: [shiftId], references: [id])
+  shiftId   String
+  class     Class    @relation(fields: [classId], references: [id])
+  classId   String
+  section   Section  @relation(fields: [sectionId], references: [id])
+  sectionId String
+  subject   Subject  @relation(fields: [subjectId], references: [id])
+  subjectId String
+  room      Room?    @relation(fields: [roomId], references: [id])
+  roomId    String?
+  teacher   Teacher  @relation(fields: [teacherId], references: [id])
+  teacherId String
+  /// "First teacher": the one who takes the section's daily attendance.
+  /// At most one per section (enforced in the service); the admin-set
+  /// Section.attendanceTakerId override still wins over this flag.
+  takesAttendance Boolean @default(false)
+  slots     RoutineSlot[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([sectionId, subjectId])
+  @@index([teacherId])
+  @@index([classId])
+  @@index([shiftId])
+  @@index([roomId])
+}
+
+model Attendance {
+  id         String           @id @default(cuid())
+  student    Student          @relation(fields: [studentId], references: [id])
+  studentId  String
+  section    Section          @relation(fields: [sectionId], references: [id])
+  sectionId  String
+  date       DateTime         @db.Date
+  status     AttendanceStatus
+  takenBy    Teacher?         @relation(fields: [takenById], references: [id])
+  takenById  String?
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
+
+  @@unique([studentId, date])
+  @@index([sectionId, date])
+  @@index([takenById])
+}
+
+model FeeStructure {
+  id        String   @id @default(cuid())
+  name      String
+  class     Class    @relation(fields: [classId], references: [id])
+  classId   String
+  shift     Shift    @relation(fields: [shiftId], references: [id])
+  shiftId   String
+  year      Int
+  /// Integer paisa — never float (db-schema.md).
+  amount    Int
+  /// admission = charged once when a student is admitted; monthly = generated
+  /// every month by the accountant; other = ad-hoc (exam fee, trip, …).
+  kind      FeeKind  @default(other)
+  invoices  Invoice[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime?
+
+  @@index([classId])
+  @@index([shiftId])
+}
+
+model Invoice {
+  id             String        @id @default(cuid())
+  student        Student       @relation(fields: [studentId], references: [id])
+  studentId      String
+  feeStructure   FeeStructure  @relation(fields: [feeStructureId], references: [id])
+  feeStructureId String
+  term           String
+  amountDue      Int
+  amountPaid     Int           @default(0)
+  status         InvoiceStatus @default(unpaid)
+  dueDate        DateTime      @db.Date
+  payments       Payment[]
+  onlinePayments OnlinePayment[]
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  @@index([studentId])
+  @@index([feeStructureId])
+  @@index([status])
+}
+
+model Payment {
+  id             String        @id @default(cuid())
+  invoice        Invoice       @relation(fields: [invoiceId], references: [id])
+  invoiceId      String
+  amount         Int
+  method         PaymentMethod
+  transactionRef String?
+  paidAt         DateTime      @default(now())
+
+  @@index([invoiceId])
+}
+
+model Notice {
+  id           String          @id @default(cuid())
+  title        String
+  /// Sanitized with DOMPurify server-side before write (cms-domain.md).
+  bodyHtml     String
+  audience     NoticeAudience  @default(all)
+  publishedAt  DateTime?
+  createdBy    User            @relation(fields: [createdById], references: [id])
+  createdById  String
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+  deletedAt    DateTime?
+
+  @@index([audience])
+  @@index([publishedAt])
+}
+
+model Event {
+  id          String    @id @default(cuid())
+  title       String
+  description String?
+  startAt     DateTime
+  endAt       DateTime?
+  location    String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+
+  @@index([startAt])
+}
+
+/// Parent inquiry, ticket-style (MASTER_PLAN.md Phase 2).
+model InquiryTicket {
+  id          String         @id @default(cuid())
+  subject     String
+  status      TicketStatus   @default(open)
+  createdBy   User           @relation(fields: [createdById], references: [id])
+  createdById String
+  messages    TicketMessage[]
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  @@index([createdById])
+  @@index([status])
+}
+
+model TicketMessage {
+  id        String        @id @default(cuid())
+  ticket    InquiryTicket @relation(fields: [ticketId], references: [id])
+  ticketId  String
+  sender    User          @relation(fields: [senderId], references: [id])
+  senderId  String
+  body      String
+  createdAt DateTime      @default(now())
+
+  @@index([ticketId])
+}
+
+// ---------------------------------------------------------------------------
+// Phase 3 — LMS
+// ---------------------------------------------------------------------------
+
+/// Belongs to (class, section, subject, teacher); invisible to
+/// parent/student until publishedAt is set (lms-domain.md).
+model Resource {
+  id          String       @id @default(cuid())
+  title       String
+  kind        ResourceKind
+  /// Direct link for now — becomes a real upload once a storage SDK is
+  /// wired in (packages/config/src/providers/storage.ts).
+  url         String
+  class       Class        @relation(fields: [classId], references: [id])
+  classId     String
+  section     Section      @relation(fields: [sectionId], references: [id])
+  sectionId   String
+  subject     Subject      @relation(fields: [subjectId], references: [id])
+  subjectId   String
+  teacher     Teacher      @relation(fields: [teacherId], references: [id])
+  teacherId   String
+  /// Set only for kind = live_link, the scheduled class time.
+  scheduledAt DateTime?
+  publishedAt DateTime?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  deletedAt   DateTime?
+
+  @@index([sectionId])
+  @@index([subjectId])
+  @@index([classId])
+  @@index([teacherId])
+}
+
+/// Assignment → Submission → Grade → Publish (lms-domain.md).
+model Assignment {
+  id          String       @id @default(cuid())
+  title       String
+  description String
+  subject     Subject      @relation(fields: [subjectId], references: [id])
+  subjectId   String
+  section     Section      @relation(fields: [sectionId], references: [id])
+  sectionId   String
+  teacher     Teacher      @relation(fields: [teacherId], references: [id])
+  teacherId   String
+  dueAt       DateTime
+  submissions Submission[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  deletedAt   DateTime?
+
+  @@index([sectionId])
+  @@index([subjectId])
+  @@index([teacherId])
+}
+
+model Submission {
+  id               String     @id @default(cuid())
+  assignment       Assignment @relation(fields: [assignmentId], references: [id])
+  assignmentId     String
+  student          Student    @relation(fields: [studentId], references: [id])
+  studentId        String
+  body             String?
+  fileUrl          String?
+  grade            Float?
+  feedback         String?
+  /// Grade/feedback hidden from student/parent until this is set
+  /// (lms-domain.md publish step).
+  gradePublishedAt DateTime?
+  submittedAt      DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
+
+  @@unique([assignmentId, studentId])
+  @@index([studentId])
+}
+
+/// Exam → Marks entry → Result compute → Publish (lms-domain.md).
+/// "Result compute" here is simply the marks themselves, surfaced once
+/// publishedAt is set — no separate aggregate Result model in this phase.
+model Exam {
+  id          String   @id @default(cuid())
+  name        String
+  type        ExamType
+  subject     Subject  @relation(fields: [subjectId], references: [id])
+  subjectId   String
+  section     Section  @relation(fields: [sectionId], references: [id])
+  sectionId   String
+  examDate    DateTime @db.Date
+  maxMarks    Float
+  publishedAt DateTime?
+  marks       Mark[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  deletedAt   DateTime?
+
+  @@index([sectionId])
+  @@index([subjectId])
+}
+
+model Mark {
+  id            String  @id @default(cuid())
+  exam          Exam    @relation(fields: [examId], references: [id])
+  examId        String
+  student       Student @relation(fields: [studentId], references: [id])
+  studentId     String
+  marksObtained Float
+  comment       String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([examId, studentId])
+  @@index([studentId])
+}
+
+// ---------------------------------------------------------------------------
+// Phase 4 — ERP + CMS
+// ---------------------------------------------------------------------------
+
+/// Monthly salary run for any staff User (teacher, accountant, librarian,
+/// admin, coordinator) — erp-domain.md: "Salary: monthly, deductions,
+/// bonuses. Payslip generated." (the payslip is this row, rendered as a
+/// printable view on the frontend — no PDF binary generated server-side yet).
+model Salary {
+  id          String    @id @default(cuid())
+  staff       User      @relation(fields: [staffId], references: [id])
+  staffId     String
+  month       Int
+  year        Int
+  /// All amounts integer paisa (db-schema.md).
+  baseAmount  Int
+  deductions  Int       @default(0)
+  bonuses     Int       @default(0)
+  netAmount   Int
+  paidAt      DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@unique([staffId, month, year])
+  @@index([staffId])
+}
+
+model Book {
+  id              String       @id @default(cuid())
+  title           String
+  author          String
+  isbn            String?
+  totalCopies     Int
+  availableCopies Int
+  /// Null = not for sale, only for lending.
+  priceForSale    Int?
+  issues          BookIssue[]
+  sales           BookSale[]
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+  deletedAt       DateTime?
+}
+
+model BookIssue {
+  id         String    @id @default(cuid())
+  book       Book      @relation(fields: [bookId], references: [id])
+  bookId     String
+  borrower   User      @relation(fields: [borrowerId], references: [id])
+  borrowerId String
+  issuedAt   DateTime  @default(now())
+  dueAt      DateTime  @db.Date
+  returnedAt DateTime?
+  /// Computed at return time — integer paisa, a fixed rate per overdue day.
+  fineAmount Int?
+
+  @@index([bookId])
+  @@index([borrowerId])
+}
+
+model BookSale {
+  id        String   @id @default(cuid())
+  book      Book     @relation(fields: [bookId], references: [id])
+  bookId    String
+  buyer     User     @relation(fields: [buyerId], references: [id])
+  buyerId   String
+  quantity  Int
+  amount    Int
+  soldAt    DateTime @default(now())
+
+  @@index([bookId])
+  @@index([buyerId])
+}
+
+/// Page → Blocks in cms-domain.md's language is simplified here to a single
+/// rich-text body per page (no separate Block model yet) — Draft → Review →
+/// Published workflow still applies via `status`.
+model Page {
+  id          String     @id @default(cuid())
+  slug        String     @unique
+  title       String
+  /// Sanitized with DOMPurify server-side before write (cms-domain.md).
+  bodyHtml    String
+  status      PageStatus @default(draft)
+  publishedAt DateTime?
+  createdBy   User       @relation(fields: [createdById], references: [id])
+  createdById String
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  deletedAt   DateTime?
+
+  @@index([status])
+}
+
+/// Per-role concurrent session cap, only enforced when the
+/// DEVICE_CONTROL_ENABLED env flag is true (packages/config/src/env.ts).
+model DeviceLimit {
+  role        RoleName @id
+  maxSessions Int
+  updatedAt   DateTime @updatedAt
+}
+
+// ---------------------------------------------------------------------------
+// Routine (timetable)
+// ---------------------------------------------------------------------------
+
+enum Weekday {
+  sun
+  mon
+  tue
+  wed
+  thu
+  fri
+  sat
+}
+
+/// One bell-schedule period of a shift ("Period 1  08:00-08:45", or a break).
+/// startTime/endTime are zero-padded "HH:MM" so they compare as strings.
+model Period {
+  id        String   @id @default(cuid())
+  name      String
+  shift     Shift    @relation(fields: [shiftId], references: [id])
+  shiftId   String
+  startTime String
+  endTime   String
+  sortOrder Int      @default(0)
+  isBreak   Boolean  @default(false)
+  slots     RoutineSlot[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([shiftId])
+}
+
+/// "This class assignment meets on this weekday in this period". The class
+/// routine is simply every slot grouped by section / teacher — it is never
+/// stored separately, so it can't drift out of sync with the assignments.
+model RoutineSlot {
+  id           String          @id @default(cuid())
+  assignment   ClassAssignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  assignmentId String
+  period       Period          @relation(fields: [periodId], references: [id])
+  periodId     String
+  dayOfWeek    Weekday
+  createdAt    DateTime        @default(now())
+
+  @@unique([assignmentId, dayOfWeek, periodId])
+  @@index([periodId, dayOfWeek])
+}
+
+model AcademicYear {
+  id        String   @id @default(cuid())
+  name      String
+  school    School   @relation(fields: [schoolId], references: [id])
+  schoolId  String
+  startDate DateTime @db.Date
+  endDate   DateTime @db.Date
+  isCurrent Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([schoolId])
+}
+
+/// Super-Admin-controlled cap on how many ACTIVE accounts a role may have
+/// (distinct from DeviceLimit, which caps concurrent sessions per user).
+model RoleAccountLimit {
+  role        RoleName @id
+  maxAccounts Int
+  updatedAt   DateTime @updatedAt
+}
+
+// ---------------------------------------------------------------------------
+// Fees: kinds + online payment sessions
+// ---------------------------------------------------------------------------
+
+enum FeeKind {
+  admission
+  monthly
+  other
+}
+
+enum PaymentSessionStatus {
+  pending
+  succeeded
+  failed
+}
+
+/// One checkout attempt at a gateway. The Payment row (the ledger entry) is
+/// only written when the gateway confirms, and `paymentId` makes that
+/// confirmation idempotent — a replayed callback can never pay twice.
+model OnlinePayment {
+  id               String               @id @default(cuid())
+  invoice          Invoice              @relation(fields: [invoiceId], references: [id])
+  invoiceId        String
+  method           PaymentMethod
+  amount           Int
+  status           PaymentSessionStatus @default(pending)
+  gatewaySessionId String               @unique
+  paymentId        String?
+  createdAt        DateTime             @default(now())
+  updatedAt        DateTime             @updatedAt
+
+  @@index([invoiceId])
+}
+
+// ---------------------------------------------------------------------------
+// Public website (CMS)
+// ---------------------------------------------------------------------------
+
+/// Key/value site content ("general", "home", "admission"), validated per key
+/// with Zod in shared-types before it is written.
+model SiteSetting {
+  key       String   @id
+  value     Json
+  updatedAt DateTime @updatedAt
+}
+
+model GalleryImage {
+  id        String    @id @default(cuid())
+  url       String
+  caption   String?
+  album     String?
+  sortOrder Int       @default(0)
+  createdAt DateTime  @default(now())
+  deletedAt DateTime?
+}
+
+model ContactMessage {
+  id        String   @id @default(cuid())
+  name      String
+  email     String
+  phone     String?
+  message   String
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+enum AdmissionStatus {
+  new
+  approved
+  rejected
+}
+
+/// Submitted from the public Admission page; an admin reviews it and, on
+/// approval, it is turned into a real Student (+ guardian + invoices).
+model AdmissionApplication {
+  id            String          @id @default(cuid())
+  studentName   String
+  dateOfBirth   DateTime?       @db.Date
+  gender        String?
+  appliedClass  Class?          @relation(fields: [appliedClassId], references: [id])
+  appliedClassId String?
+  previousSchool String?
+  guardianName  String
+  guardianPhone String
+  guardianEmail String
+  address       String?
+  message       String?
+  status        AdmissionStatus @default(new)
+  studentId     String?
+  reviewNote    String?
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  @@index([status])
+  @@index([appliedClassId])
+}

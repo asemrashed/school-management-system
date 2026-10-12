@@ -1,0 +1,28 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html {
+  scroll-behavior: smooth;
+}
+
+:root {
+  color-scheme: light;
+}
+
+body {
+  @apply bg-slate-50 text-slate-900;
+}
+
+/* Minimal typography for CMS-authored HTML (headings, lists, links, quotes) —
+   Tailwind's reset strips these, and we avoid an extra plugin dependency. */
+.prose h1, .prose h2, .prose h3 { font-family: var(--font-display), Georgia, serif; font-weight: 600; margin: 1.4em 0 0.5em; line-height: 1.25; }
+.prose h1 { font-size: 1.875rem; } .prose h2 { font-size: 1.5rem; } .prose h3 { font-size: 1.2rem; }
+.prose p { margin: 0.9em 0; line-height: 1.7; }
+.prose ul { list-style: disc; padding-left: 1.4em; margin: 0.9em 0; }
+.prose ol { list-style: decimal; padding-left: 1.4em; margin: 0.9em 0; }
+.prose a { color: #2a655c; text-decoration: underline; }
+.prose blockquote { border-left: 3px solid #d4ab52; padding-left: 1em; color: #555; margin: 1em 0; }
+.prose img { max-width: 100%; height: auto; border-radius: 0.5rem; }
+.prose table { width: 100%; border-collapse: collapse; margin: 1em 0; }
+.prose th, .prose td { border: 1px solid rgba(28,32,31,0.15); padding: 0.4em 0.6em; text-align: left; }

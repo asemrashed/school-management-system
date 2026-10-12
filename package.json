@@ -1,0 +1,26 @@
+{
+  "name": "bd-english-medium-sms",
+  "private": true,
+  "version": "0.1.0",
+  "description": "BD English-Medium School Management System \u2014 LMS + ERP + CMS (single-school)",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev:web": "npm run dev --workspace=apps/web",
+    "dev:api": "npm run dev --workspace=apps/api",
+    "build:web": "npm run build --workspace=apps/web",
+    "build:api": "npm run build --workspace=apps/api",
+    "prisma:generate": "npm run prisma:generate --workspace=apps/api",
+    "prisma:migrate": "npm run prisma:migrate --workspace=apps/api",
+    "prisma:seed": "npm run prisma:seed --workspace=apps/api",
+    "test": "npm run test --workspace=apps/api",
+    "lint": "npm run lint --workspace=apps/web && npm run lint --workspace=apps/api",
+    "typecheck": "npm run typecheck --workspace=apps/web && npm run typecheck --workspace=apps/api",
+    "prisma:seed:demo": "npm run prisma:seed:demo --workspace=apps/api"
+  },
+  "engines": {
+    "node": ">=18.18.0"
+  }
+}
