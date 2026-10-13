@@ -14,7 +14,7 @@ export default function DashboardOverviewPage() {
 
   // Only admin-tier roles use the generic overview; everyone else lands on
   // the dashboard built for their role.
-  const usesOverview = user?.role === "super_admin" || user?.role === "admin" || user?.role === "coordinator";
+  const usesOverview = user?.role === "super_admin" || user?.role === "admin";
   React.useEffect(() => {
     if (user && !usesOverview) {
       // Keep ?payment=success|failed from the gateway return so the fees tab can announce it.
@@ -33,7 +33,7 @@ export default function DashboardOverviewPage() {
       />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <RoleGate allow={["super_admin", "admin", "coordinator"]} currentRole={user?.role}>
+        <RoleGate allow={["super_admin", "admin"]} currentRole={user?.role}>
           <StatCard label="Total students" value="—" hint="Wire up in Phase 2" icon={<GraduationCap className="h-5 w-5" />} />
         </RoleGate>
         <RoleGate allow={["super_admin", "admin", "accountant"]} currentRole={user?.role}>

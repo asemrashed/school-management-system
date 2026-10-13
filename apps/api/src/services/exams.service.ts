@@ -8,6 +8,7 @@ import { notify } from "./notification.service";
  * visible and fires the notification.
  */
 export async function publishExam(examId: string) {
+  // (also used for stand-alone exams that have no session)
   const exam = await prisma.exam.update({
     where: { id: examId },
     data: { publishedAt: new Date() },
@@ -32,4 +33,26 @@ export async function publishExam(examId: string) {
   }
 
   return exam;
+}
+
+/**
+ * Publishes the whole session once EVERY (non-deleted) exam in it is approved.
+ * Idempotent: a second call after publishing does nothing. Returns whether the
+ * session is (now) published.
+ */
+export async function publishSessionIfComplete(sessionId: string): Promise<boolean> {
+  const session = await prisma.examSession.findUnique({ where: { id: sessionId } });
+  if (!session || session.deletedAt) return false;
+  if (session.publishedAt) return true;
+  const exams = await prisma.exam.findMany({ where: { sessionId, deletedAt: null } });
+  if (exams.length === 0 || exams.some((e) => !e.approvedAt)) return false;
+
+  // Claim the session first so two concurrent last-approvals cannot both notify.
+  const claimed = await prisma.examSession.updateMany({
+    where: { id: sessionId, publishedAt: null },
+    data: { publishedAt: new Date() },
+  });
+  if (claimed.count === 0) return true;
+  for (const e of exams) await publishExam(e.id);
+  return true;
 }

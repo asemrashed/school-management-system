@@ -1,5 +1,5 @@
 import { beforeAll, afterAll, beforeEach, describe, expect, it } from "vitest";
-import { Client, startServer, stopServer, seedSchool, loginAs, db, mailbox, type World } from "./helpers/harness";
+import { Client, startServer, stopServer, seedSchool, loginAs, db, mailbox, submitAndApprove, type World } from "./helpers/harness";
 
 let w: World;
 beforeAll(startServer);
@@ -12,12 +12,18 @@ beforeEach(async () => {
   await admin.post("/academics/class-assignments", { shiftId: w.shift.id, classId: w.cls.id, sectionId: w.sectionB.id, subjectId: w.english.id, teacherId: w.teacher.id });
 });
 
-async function createExam(teacher: Client) {
-  const r = await teacher.post("/exams", { name: "Mid-term", type: "offline", subjectId: w.math.id, sectionId: w.sectionA.id, examDate: "2026-01-15", maxMarks: 100 });
+async function createExam(_teacher?: Client) {
+  const admin = await loginAs(w.admin.email);
+  const r = await admin.post("/exams", { name: "Mid-term", type: "offline", subjectId: w.math.id, sectionId: w.sectionA.id, examDate: "2026-01-15", maxMarks: 100 });
   return r.body.exam;
 }
 
 describe("exams & marks — result-publish gating and locking", () => {
+  it("a teacher cannot create an exam (only admin / coordinator schedule exams)", async () => {
+    const teacher = await loginAs(w.teacherUser.email);
+    const r = await teacher.post("/exams", { name: "Mine", type: "offline", subjectId: w.math.id, sectionId: w.sectionA.id, examDate: "2026-01-15", maxMarks: 100 });
+    expect(r.status).toBe(403);
+  });
   it("marks are invisible to students/parents before publish, and staff can see them", async () => {
     const teacher = await loginAs(w.teacherUser.email);
     const exam = await createExam(teacher);
@@ -33,10 +39,10 @@ describe("exams & marks — result-publish gating and locking", () => {
   it("publishing locks marks entry and notifies the guardian with the score", async () => {
     const teacher = await loginAs(w.teacherUser.email);
     const exam = await createExam(teacher);
-    await teacher.post("/exams/marks", { examId: exam.id, entries: [{ studentId: w.student.id, marksObtained: 91 }] });
+    await teacher.post("/exams/marks", { examId: exam.id, entries: [{ studentId: w.student.id, marksObtained: 91 }, { studentId: w.student2.id, marksObtained: 50 }] });
     mailbox().length = 0;
 
-    const pub = await teacher.post("/exams/publish", { examId: exam.id });
+    const pub = await submitAndApprove(teacher, exam.id, w.coordinator.email);
     expect(pub.status).toBe(200);
     expect(pub.body.exam.publishedAt).not.toBeNull();
     expect(mailbox().some((m) => m.to === w.parentUser.email && /91/.test(m.html))).toBe(true);
@@ -52,7 +58,7 @@ describe("exams & marks — result-publish gating and locking", () => {
     const teacher = await loginAs(w.teacherUser.email);
     const exam = await createExam(teacher);
     await teacher.post("/exams/marks", { examId: exam.id, entries: [{ studentId: w.student.id, marksObtained: 70 }, { studentId: w.student2.id, marksObtained: 95 }] });
-    await teacher.post("/exams/publish", { examId: exam.id });
+    await submitAndApprove(teacher, exam.id, w.coordinator.email);
     const student = await loginAs(w.studentUser.email);
     const marks = await student.get(`/exams/${exam.id}/marks`);
     expect(marks.body.items).toHaveLength(1);
@@ -60,10 +66,10 @@ describe("exams & marks — result-publish gating and locking", () => {
   });
   it("a parent from a different family never sees another family's exam results", async () => {
     const teacher = await loginAs(w.teacherUser.email);
-    const examB = await teacher.post("/exams", { name: "B test", type: "offline", subjectId: w.english.id, sectionId: w.sectionB.id, examDate: "2026-01-20", maxMarks: 50 });
+    const examB = await (await loginAs(w.admin.email)).post("/exams", { name: "B test", type: "offline", subjectId: w.english.id, sectionId: w.sectionB.id, examDate: "2026-01-20", maxMarks: 50 });
     // otherStudent is in sectionB; grade+publish it
     await teacher.post("/exams/marks", { examId: examB.body.exam.id, entries: [{ studentId: w.otherStudent.id, marksObtained: 40 }] });
-    await teacher.post("/exams/publish", { examId: examB.body.exam.id });
+    await submitAndApprove(teacher, examB.body.exam.id, w.coordinator.email);
 
     const parentA = await loginAs(w.parentUser.email); // parent of sectionA students only
     const exams = await parentA.get("/exams");

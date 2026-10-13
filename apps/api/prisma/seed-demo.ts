@@ -336,6 +336,19 @@ export async function runDemoSeed(prisma: Db, log: (m: string) => void = console
     { key: "mid", name: "Midterm Exam", type: "offline" as const, max: 100, daysBack: 18 },
   ];
   let markCount = 0;
+  // One ExamSession per class x exam: the school-wide round that the approval workflow runs on.
+  for (const cls of CLASSES) {
+    for (const ex of exams) {
+      const sid = `demo-session-${cls.key}-${ex.key}`;
+      const sdata = {
+        name: ex.name,
+        term: ex.key === "mid" ? ("mid_term" as const) : ("class_test" as const),
+        classId: cls.id,
+        publishedAt: daysAgo(ex.daysBack - 3),
+      };
+      await prisma.examSession.upsert({ where: { id: sid }, update: sdata, create: { id: sid, ...sdata } });
+    }
+  }
   for (const sec of SECTIONS) {
     const students = studentRows.filter((s) => s.sectionId === sec.id);
     for (let i = 0; i < SUBJECTS.length; i++) {
@@ -348,6 +361,9 @@ export async function runDemoSeed(prisma: Db, log: (m: string) => void = console
           sectionId: sec.id,
           examDate: dateOnly(daysAgo(ex.daysBack)),
           maxMarks: ex.max,
+          sessionId: `demo-session-${sec.cls}-${ex.key}`,
+          marksSubmittedAt: daysAgo(ex.daysBack - 1),
+          approvedAt: daysAgo(ex.daysBack - 2),
           publishedAt: daysAgo(ex.daysBack - 3),
         };
         await prisma.exam.upsert({ where: { id: examId }, update: data, create: { id: examId, ...data } });
@@ -370,6 +386,30 @@ export async function runDemoSeed(prisma: Db, log: (m: string) => void = console
     }
   }
   log(`✔ ${SECTIONS.length * SUBJECTS.length * exams.length} published exams, ${markCount} marks`);
+
+  // An exam still in progress, so the approval workflow can be tried straight away:
+  // log in as a teacher -> enter marks -> Submit; then as coordinator@ -> Approve.
+  const finalSession = await prisma.examSession.upsert({
+    where: { id: "demo-session-6-final" },
+    update: {},
+    create: { id: "demo-session-6-final", name: "Final Exam 2026", term: "final", classId: "default-class-6" },
+  });
+  for (const sec of SECTIONS.filter((x) => x.cls === "6")) {
+    for (let i = 0; i < SUBJECTS.length; i++) {
+      const examId = `demo-exam-${sec.id}-${i}-final`;
+      const data = {
+        name: finalSession.name,
+        type: "offline" as const,
+        subjectId: subjectId("6", i),
+        sectionId: sec.id,
+        examDate: dateOnly(daysAgo(-20)),
+        maxMarks: 100,
+        sessionId: finalSession.id,
+      };
+      await prisma.exam.upsert({ where: { id: examId }, update: {}, create: { id: examId, ...data } });
+    }
+  }
+  log("✔ Final Exam 2026 (Class 6) created, waiting for teachers' marks");
 
   // ---- teacher resources + homework -----------------------------------------------------------
   const resourceKinds: Array<{ kind: ResourceKind; title: (s: string) => string; url: string }> = [

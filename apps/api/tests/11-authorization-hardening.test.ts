@@ -47,20 +47,20 @@ describe("teacher data isolation", () => {
     const admin = await assignTeachers();
     const t = await loginAs(w.teacherUser.email);
     const bad = await t.post("/exams", { name: "Sneaky", type: "offline", subjectId: w.english.id, sectionId: w.sectionB.id, examDate: "2026-02-01", maxMarks: 50 });
-    expect(bad.status).toBe(403);
+    expect(bad.status).toBe(403); // teachers never create exams
 
     // an exam that exists in B (created by admin) is off-limits for teacher #1
     const exam = (await admin.post("/exams", { name: "B exam", type: "offline", subjectId: w.english.id, sectionId: w.sectionB.id, examDate: "2026-02-01", maxMarks: 50 })).body.exam;
     expect((await t.post("/exams/marks", { examId: exam.id, entries: [{ studentId: w.otherStudent.id, marksObtained: 5 }] })).status).toBe(403);
     expect((await t.get(`/exams/${exam.id}/marks`)).status).toBe(403);
-    expect((await t.post("/exams/publish", { examId: exam.id })).status).toBe(403);
+    expect((await t.post(`/exams/${exam.id}/submit`)).status).toBe(403);
     expect((await t.get("/exams")).body.items.some((e: any) => e.id === exam.id)).toBe(false);
   });
 
   it("rejects marks above the exam maximum, duplicates, and students outside the section", async () => {
     await assignTeachers();
     const t = await loginAs(w.teacherUser.email);
-    const exam = (await t.post("/exams", { name: "Quiz", type: "offline", subjectId: w.math.id, sectionId: w.sectionA.id, examDate: "2026-02-01", maxMarks: 20 })).body.exam;
+    const exam = (await (await loginAs(w.admin.email)).post("/exams", { name: "Quiz", type: "offline", subjectId: w.math.id, sectionId: w.sectionA.id, examDate: "2026-02-01", maxMarks: 20 })).body.exam;
     expect((await t.post("/exams/marks", { examId: exam.id, entries: [{ studentId: w.student.id, marksObtained: 21 }] })).body.code).toBe("MARKS_EXCEED_MAX");
     expect((await t.post("/exams/marks", { examId: exam.id, entries: [{ studentId: w.student.id, marksObtained: 5 }, { studentId: w.student.id, marksObtained: 6 }] })).body.code).toBe("DUPLICATE_ENTRIES");
     expect((await t.post("/exams/marks", { examId: exam.id, entries: [{ studentId: w.otherStudent.id, marksObtained: 5 }] })).body.code).toBe("STUDENT_NOT_IN_SECTION");
@@ -102,7 +102,8 @@ describe("parent / student data isolation", () => {
     const t2 = await loginAs(w.teacher2User.email);
     const exam = (await admin.post("/exams", { name: "B exam", type: "offline", subjectId: w.english.id, sectionId: w.sectionB.id, examDate: "2026-02-01", maxMarks: 50 })).body.exam;
     await t2.post("/exams/marks", { examId: exam.id, entries: [{ studentId: w.otherStudent.id, marksObtained: 44 }] });
-    await t2.post("/exams/publish", { examId: exam.id });
+    await t2.post(`/exams/${exam.id}/submit`);
+    await (await loginAs(w.coordinator.email)).post(`/exams/${exam.id}/approve`);
 
     const wrongParent = await loginAs(w.parentUser.email);
     expect((await wrongParent.get(`/exams/${exam.id}/marks`)).body.items).toHaveLength(0);

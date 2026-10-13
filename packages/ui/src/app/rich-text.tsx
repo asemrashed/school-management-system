@@ -25,6 +25,16 @@ export function RichTextEditor({
 }) {
   const ref = React.useRef<HTMLDivElement>(null);
 
+  // The editor DOM is the source of truth while the user types. We must NOT
+  // re-render it through dangerouslySetInnerHTML on every keystroke: React
+  // rewrites innerHTML, the caret jumps to the start, and text is typed
+  // backwards ("Hey" -> "yeH"). Only write to the DOM when the value was
+  // changed from OUTSIDE (initial value, form reset, loading a draft).
+  React.useEffect(() => {
+    const el = ref.current;
+    if (el && el.innerHTML !== value) el.innerHTML = value;
+  }, [value]);
+
   function exec(command: string, arg?: string) {
     document.execCommand(command, false, arg);
     if (ref.current) onChange(ref.current.innerHTML);
@@ -58,8 +68,14 @@ export function RichTextEditor({
         suppressContentEditableWarning
         data-placeholder={placeholder}
         className="min-h-[160px] px-3 py-2 text-sm text-slate-800 focus:outline-none empty:before:text-slate-400 empty:before:content-[attr(data-placeholder)]"
-        dangerouslySetInnerHTML={{ __html: value }}
+        role="textbox"
+        aria-multiline="true"
         onInput={(e) => onChange((e.target as HTMLDivElement).innerHTML)}
+        // Paste as plain text: stops Word/web styles and scripts-in-markup from sneaking into notices.
+        onPaste={(e) => {
+          e.preventDefault();
+          document.execCommand("insertText", false, e.clipboardData.getData("text/plain"));
+        }}
       />
     </div>
   );

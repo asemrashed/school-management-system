@@ -22,12 +22,16 @@ import { FeeStructuresPanel, GenerateFeesPanel, InvoicesPanel } from "@/componen
 import { LookupCombobox } from "@/components/forms/lookup-combobox";
 import { useSalaries, useCreateSalary, useMarkSalaryPaid } from "@/lib/hooks/use-salary";
 import { ApiError } from "@/lib/api-client";
+import { useUrlTab } from "@/lib/use-url-tab";
+
+const TAB_VALUES = ["invoices", "generate", "structures", "salaries"] as const;
 
 export default function AccountantDashboardPage() {
+  const [tab, setTab] = useUrlTab("tab", "invoices", TAB_VALUES);
   return (
     <div>
       <PageHeader title="Fees" description="Fee structures, invoices, payments and salaries." />
-      <Tabs defaultValue="invoices">
+      <Tabs value={tab} onValueChange={setTab}>
         <TabsList>
           <TabsTrigger value="invoices">Invoices</TabsTrigger>
           <TabsTrigger value="generate">Generate monthly fees</TabsTrigger>

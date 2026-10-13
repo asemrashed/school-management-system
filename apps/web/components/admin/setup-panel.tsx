@@ -11,6 +11,9 @@ import { LookupCombobox } from "@/components/forms/lookup-combobox";
 import { errorMessage } from "@/lib/errors";
 import * as setup from "@/lib/hooks/use-setup";
 import { useSubjects, useCreateSubject } from "@/lib/hooks/use-academics";
+import { useUrlTab } from "@/lib/use-url-tab";
+
+const TAB_VALUES = ["classes", "subjects", "rooms", "periods", "shifts", "years"] as const;
 
 /** Runs a mutation and reports success/failure with a toast. Returns true on success. */
 function useRunner() {
@@ -56,8 +59,9 @@ function DeleteButton({ onConfirm, what, pending }: { onConfirm: () => Promise<b
 }
 
 export function SetupPanel() {
+  const [tab, setTab] = useUrlTab("sub", "classes", TAB_VALUES);
   return (
-    <Tabs defaultValue="classes">
+    <Tabs value={tab} onValueChange={setTab}>
       <TabsList className="flex-wrap">
         <TabsTrigger value="classes">Classes & Sections</TabsTrigger>
         <TabsTrigger value="subjects">Subjects</TabsTrigger>

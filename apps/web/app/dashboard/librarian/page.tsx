@@ -29,12 +29,16 @@ import {
 } from "@/lib/hooks/use-library";
 import { LookupCombobox } from "@/components/forms/lookup-combobox";
 import { ApiError } from "@/lib/api-client";
+import { useUrlTab } from "@/lib/use-url-tab";
+
+const TAB_VALUES = ["catalog", "issues", "sales"] as const;
 
 export default function LibrarianDashboardPage() {
+  const [tab, setTab] = useUrlTab("tab", "catalog", TAB_VALUES);
   return (
     <div>
       <PageHeader title="Library" description="Catalog, issue/return, fines and book sales." />
-      <Tabs defaultValue="catalog">
+      <Tabs value={tab} onValueChange={setTab}>
         <TabsList>
           <TabsTrigger value="catalog">Catalog</TabsTrigger>
           <TabsTrigger value="issues">Issue / Return</TabsTrigger>

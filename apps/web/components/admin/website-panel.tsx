@@ -16,11 +16,15 @@ import {
   useAddGalleryImage, useAdminGallery, useContactMessages, useDeleteGalleryImage, useMarkContactRead,
   useSaveSiteSetting, useSiteSettings, useUpdateWebsiteTeacher, useWebsiteTeachers,
 } from "@/lib/hooks/use-site";
+import { useUrlTab } from "@/lib/use-url-tab";
+
+const TAB_VALUES = ["general", "home", "admission", "teachers", "gallery", "messages"] as const;
 
 /** Super Admin / Admin: everything the public website shows, no code or IDs needed. */
 export function WebsitePanel() {
+  const [tab, setTab] = useUrlTab("sub", "general", TAB_VALUES);
   return (
-    <Tabs defaultValue="general">
+    <Tabs value={tab} onValueChange={setTab}>
       <TabsList>
         <TabsTrigger value="general">School info & menu</TabsTrigger>
         <TabsTrigger value="home">Home page</TabsTrigger>

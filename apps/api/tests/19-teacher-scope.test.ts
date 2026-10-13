@@ -76,8 +76,9 @@ describe("teacher data scope", () => {
 
   it("performance: a teacher sees only their own subject's results for a student", async () => {
     for (const [ex, uid] of [[mathExam, tina], [engExam, tom]] as const) {
-      await uid.post("/exams/marks", { examId: ex, entries: [{ studentId: w.student.id, marksObtained: 80 }] });
-      await admin.post("/exams/publish", { examId: ex });
+      await uid.post("/exams/marks", { examId: ex, entries: [{ studentId: w.student.id, marksObtained: 80 }, { studentId: w.student2.id, marksObtained: 60 }] });
+      await uid.post(`/exams/${ex}/submit`);
+      await admin.post(`/exams/${ex}/approve`);
     }
     const p = await tina.get(`/students/${w.student.id}/performance`);
     expect(p.body.performance.exams.map((e: any) => e.subjectName)).toEqual(["Mathematics"]);

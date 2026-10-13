@@ -27,20 +27,24 @@ import { createTicketSchema } from "@packages/shared-types";
 import { MyFeesPanel } from "@/components/fees/my-fees-panel";
 import { useNotices } from "@/lib/hooks/use-engagement";
 import { useTickets, useCreateTicket, useAddTicketMessage } from "@/lib/hooks/use-engagement";
-import { useExams, useMarks } from "@/lib/hooks/use-exams";
+import { MyResults } from "@/components/exams/my-results";
 import { ApiError } from "@/lib/api-client";
 import { MyRoutine } from "@/components/routine/my-routine";
 import { OverviewTiles, PerformanceView } from "@/components/performance/performance-view";
 import { ChildPicker, useSelectedChild } from "@/components/performance/child-picker";
+import { useUrlTab } from "@/lib/use-url-tab";
+
+const TAB_VALUES = ["overview", "performance", "routine", "fees", "results", "notices", "tickets"] as const;
 
 export default function ParentDashboardPage() {
+  const [tab, setTab] = useUrlTab("tab", "overview", TAB_VALUES);
   const child = useSelectedChild();
   return (
     <div>
       <PaymentReturnNotice />
       <PageHeader title="Parent dashboard" description="How your child is doing, fees, results, notices and support." />
       <ChildPicker items={child.items} value={child.studentId} onChange={child.setSelected} />
-      <Tabs defaultValue="overview">
+      <Tabs value={tab} onValueChange={setTab}>
         <TabsList>
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="performance">Performance</TabsTrigger>
@@ -63,36 +67,7 @@ export default function ParentDashboardPage() {
 }
 
 function ResultsPanel() {
-  const exams = useExams();
-  if (exams.isLoading) return null;
-  if (!exams.data?.items.length) return <EmptyState title="No published results yet" />;
-  return (
-    <div className="flex flex-col gap-3">
-      {exams.data.items.map((e) => (
-        <Card key={e.id}>
-          <CardContent className="pt-5">
-            <p className="text-sm font-semibold text-slate-800">{e.name}</p>
-            <p className="text-xs text-slate-400">{e.subjectName} · {e.examDate}</p>
-            <ChildMarks examId={e.id} maxMarks={e.maxMarks} />
-          </CardContent>
-        </Card>
-      ))}
-    </div>
-  );
-}
-
-function ChildMarks({ examId, maxMarks }: { examId: string; maxMarks: number }) {
-  const marks = useMarks(examId);
-  if (!marks.data?.items.length) return <p className="mt-2 text-sm text-slate-400">No mark recorded for your child.</p>;
-  return (
-    <div className="mt-2 flex flex-col gap-1">
-      {marks.data.items.map((m) => (
-        <p key={m.id} className="text-sm text-slate-700">
-          {m.studentName}: {m.marksObtained} / {maxMarks}
-        </p>
-      ))}
-    </div>
-  );
+  return <MyResults />;
 }
 
 function NoticesPanel() {

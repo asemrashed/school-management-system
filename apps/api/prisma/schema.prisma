@@ -97,6 +97,14 @@ enum ExamType {
   offline
 }
 
+/// Which round of assessment an ExamSession is (mid-term, final, ...).
+enum ExamTerm {
+  class_test
+  mid_term
+  final
+  other
+}
+
 enum PageStatus {
   draft
   review
@@ -108,16 +116,16 @@ enum PageStatus {
 // ---------------------------------------------------------------------------
 
 model School {
-  id        String   @id @default(cuid())
-  name      String
-  address   String?
-  campuses  Campus[]
-  classes   Class[]
-  shifts    Shift[]
+  id            String         @id @default(cuid())
+  name          String
+  address       String?
+  campuses      Campus[]
+  classes       Class[]
+  shifts        Shift[]
   academicYears AcademicYear[]
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  deletedAt DateTime?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  deletedAt     DateTime?
 }
 
 model Campus {
@@ -134,91 +142,92 @@ model Campus {
 }
 
 model Building {
-  id        String   @id @default(cuid())
+  id        String    @id @default(cuid())
   name      String
-  campus    Campus   @relation(fields: [campusId], references: [id])
+  campus    Campus    @relation(fields: [campusId], references: [id])
   campusId  String
   rooms     Room[]
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
   deletedAt DateTime?
 
   @@index([campusId])
 }
 
 model Room {
-  id         String    @id @default(cuid())
-  name       String
-  capacity   Int?
+  id               String            @id @default(cuid())
+  name             String
+  capacity         Int?
   /// Buildings are optional — a small school can add rooms without any.
-  building   Building? @relation(fields: [buildingId], references: [id])
-  buildingId String?
-  sections   Section[]
+  building         Building?         @relation(fields: [buildingId], references: [id])
+  buildingId       String?
+  sections         Section[]
   classAssignments ClassAssignment[]
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime  @updatedAt
-  deletedAt  DateTime?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  deletedAt        DateTime?
 
   @@index([buildingId])
 }
 
 model Shift {
-  id        String   @id @default(cuid())
-  name      String
-  school    School   @relation(fields: [schoolId], references: [id])
-  schoolId  String
-  classes   Class[]
+  id               String            @id @default(cuid())
+  name             String
+  school           School            @relation(fields: [schoolId], references: [id])
+  schoolId         String
+  classes          Class[]
   classAssignments ClassAssignment[]
   feeStructures    FeeStructure[]
-  periods   Period[]
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  deletedAt DateTime?
+  periods          Period[]
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  deletedAt        DateTime?
 
   @@index([schoolId])
 }
 
 model Class {
-  id        String    @id @default(cuid())
-  name      String
-  school    School    @relation(fields: [schoolId], references: [id])
-  schoolId  String
-  shift     Shift     @relation(fields: [shiftId], references: [id])
-  shiftId   String
-  sections  Section[]
-  subjects         Subject[]
-  feeStructures    FeeStructure[]
-  classAssignments ClassAssignment[]
-  resources        Resource[]
+  id                    String                 @id @default(cuid())
+  name                  String
+  school                School                 @relation(fields: [schoolId], references: [id])
+  schoolId              String
+  shift                 Shift                  @relation(fields: [shiftId], references: [id])
+  shiftId               String
+  sections              Section[]
+  subjects              Subject[]
+  feeStructures         FeeStructure[]
+  classAssignments      ClassAssignment[]
+  resources             Resource[]
+  examSessions          ExamSession[]
   admissionApplications AdmissionApplication[]
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  deletedAt DateTime?
+  createdAt             DateTime               @default(now())
+  updatedAt             DateTime               @updatedAt
+  deletedAt             DateTime?
 
   @@index([schoolId])
   @@index([shiftId])
 }
 
 model Section {
-  id        String    @id @default(cuid())
-  name      String
-  class     Class     @relation(fields: [classId], references: [id])
-  classId   String
-  room      Room?     @relation(fields: [roomId], references: [id])
-  roomId    String?
-  students  Student[]
+  id                  String            @id @default(cuid())
+  name                String
+  class               Class             @relation(fields: [classId], references: [id])
+  classId             String
+  room                Room?             @relation(fields: [roomId], references: [id])
+  roomId              String?
+  students            Student[]
   /// Admin override of who takes attendance for this section. Falls back to
   /// the section's first ClassAssignment.teacher when unset (lms-domain.md).
-  attendanceTaker   Teacher? @relation(fields: [attendanceTakerId], references: [id])
-  attendanceTakerId String?
-  classAssignments  ClassAssignment[]
-  attendanceRecords Attendance[]
-  resources         Resource[]
+  attendanceTaker     Teacher?          @relation(fields: [attendanceTakerId], references: [id])
+  attendanceTakerId   String?
+  classAssignments    ClassAssignment[]
+  attendanceRecords   Attendance[]
+  resources           Resource[]
   homeworkAssignments Assignment[]
-  exams             Exam[]
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  deletedAt DateTime?
+  exams               Exam[]
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
+  deletedAt           DateTime?
 
   @@index([classId])
   @@index([roomId])
@@ -230,16 +239,16 @@ model Section {
 // ---------------------------------------------------------------------------
 
 model User {
-  id            String    @id @default(cuid())
-  name          String
-  email         String    @unique
-  passwordHash  String
-  role          RoleName
-  isActive      Boolean   @default(true)
-  lastLoginAt   DateTime?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  deletedAt     DateTime?
+  id           String    @id @default(cuid())
+  name         String
+  email        String    @unique
+  passwordHash String
+  role         RoleName
+  isActive     Boolean   @default(true)
+  lastLoginAt  DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  deletedAt    DateTime?
 
   sessions          Session[]
   passwordResetOtps PasswordResetOtp[]
@@ -274,11 +283,11 @@ model Session {
 /// Grants a (role, module, action) triple. Super Admin manages this matrix
 /// at runtime (see auth-rbac-matrix.md). Absence of a row = denied.
 model Permission {
-  id       String            @id @default(cuid())
-  role     RoleName
-  module   String
-  action   PermissionAction
-  allowed  Boolean           @default(true)
+  id      String           @id @default(cuid())
+  role    RoleName
+  module  String
+  action  PermissionAction
+  allowed Boolean          @default(true)
 
   @@unique([role, module, action])
   @@index([role])
@@ -289,37 +298,37 @@ model Permission {
 // ---------------------------------------------------------------------------
 
 model Teacher {
-  id         String    @id @default(cuid())
-  user       User      @relation(fields: [userId], references: [id])
-  userId     String    @unique
-  phone      String?
-  subject    String?
+  id                    String            @id @default(cuid())
+  user                  User              @relation(fields: [userId], references: [id])
+  userId                String            @unique
+  phone                 String?
+  subject               String?
   /// Public-website profile, edited by an admin under Website -> Teachers.
-  designation   String?
-  bio           String?
-  photoUrl      String?
-  showOnWebsite Boolean @default(false)
-  websiteOrder  Int     @default(0)
-  joinedAt   DateTime  @default(now())
-  classAssignments   ClassAssignment[]
+  designation           String?
+  bio                   String?
+  photoUrl              String?
+  showOnWebsite         Boolean           @default(false)
+  websiteOrder          Int               @default(0)
+  joinedAt              DateTime          @default(now())
+  classAssignments      ClassAssignment[]
   attendanceForSections Section[]
-  attendanceTaken    Attendance[]
-  resourcesCreated   Resource[]
-  assignmentsCreated Assignment[]
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime  @updatedAt
-  deletedAt  DateTime?
+  attendanceTaken       Attendance[]
+  resourcesCreated      Resource[]
+  assignmentsCreated    Assignment[]
+  createdAt             DateTime          @default(now())
+  updatedAt             DateTime          @updatedAt
+  deletedAt             DateTime?
 }
 
 model Staff {
-  id         String    @id @default(cuid())
-  user       User      @relation(fields: [userId], references: [id])
-  userId     String    @unique
+  id          String    @id @default(cuid())
+  user        User      @relation(fields: [userId], references: [id])
+  userId      String    @unique
   designation String?
-  phone      String?
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime  @updatedAt
-  deletedAt  DateTime?
+  phone       String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
 }
 
 model Guardian {
@@ -334,27 +343,27 @@ model Guardian {
 }
 
 model Student {
-  id          String    @id @default(cuid())
-  user        User      @relation(fields: [userId], references: [id])
-  userId      String    @unique
-  rollNumber  String?
+  id                String       @id @default(cuid())
+  user              User         @relation(fields: [userId], references: [id])
+  userId            String       @unique
+  rollNumber        String?
   /// Auto-generated at admission, e.g. "2026-0007". Never typed by hand.
-  studentCode String?   @unique
-  dateOfBirth DateTime? @db.Date
-  gender      String?
-  address     String?
-  section     Section?  @relation(fields: [sectionId], references: [id])
-  sectionId   String?
-  guardian    Guardian? @relation(fields: [guardianId], references: [id])
-  guardianId  String?
-  admittedAt  DateTime  @default(now())
+  studentCode       String?      @unique
+  dateOfBirth       DateTime?    @db.Date
+  gender            String?
+  address           String?
+  section           Section?     @relation(fields: [sectionId], references: [id])
+  sectionId         String?
+  guardian          Guardian?    @relation(fields: [guardianId], references: [id])
+  guardianId        String?
+  admittedAt        DateTime     @default(now())
   attendanceRecords Attendance[]
   invoices          Invoice[]
   submissions       Submission[]
   marks             Mark[]
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  deletedAt   DateTime?
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+  deletedAt         DateTime?
 
   @@index([sectionId])
   @@index([guardianId])
@@ -366,15 +375,15 @@ model Student {
 
 /// Never store the raw OTP — only a hash (see db-schema.md).
 model PasswordResetOtp {
-  id          String     @id @default(cuid())
-  user        User       @relation(fields: [userId], references: [id])
-  userId      String
-  codeHash    String
-  channel     OtpChannel?
-  expiresAt   DateTime
-  attempts    Int        @default(0)
-  consumedAt  DateTime?
-  createdAt   DateTime   @default(now())
+  id         String      @id @default(cuid())
+  user       User        @relation(fields: [userId], references: [id])
+  userId     String
+  codeHash   String
+  channel    OtpChannel?
+  expiresAt  DateTime
+  attempts   Int         @default(0)
+  consumedAt DateTime?
+  createdAt  DateTime    @default(now())
 
   @@index([userId])
   @@index([expiresAt])
@@ -398,17 +407,17 @@ model MessagingFeatureToggle {
 // ---------------------------------------------------------------------------
 
 model Subject {
-  id        String   @id @default(cuid())
-  name      String
-  class     Class    @relation(fields: [classId], references: [id])
-  classId   String
+  id          String            @id @default(cuid())
+  name        String
+  class       Class             @relation(fields: [classId], references: [id])
+  classId     String
   assignments ClassAssignment[]
-  resources     Resource[]
-  homeworks     Assignment[]
-  exams         Exam[]
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  deletedAt DateTime?
+  resources   Resource[]
+  homeworks   Assignment[]
+  exams       Exam[]
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  deletedAt   DateTime?
 
   @@index([classId])
 }
@@ -416,26 +425,26 @@ model Subject {
 /// shift + class + section + subject + room + instructor, in one row
 /// (MASTER_PLAN.md Phase 2: Class assignment).
 model ClassAssignment {
-  id        String   @id @default(cuid())
-  shift     Shift    @relation(fields: [shiftId], references: [id])
-  shiftId   String
-  class     Class    @relation(fields: [classId], references: [id])
-  classId   String
-  section   Section  @relation(fields: [sectionId], references: [id])
-  sectionId String
-  subject   Subject  @relation(fields: [subjectId], references: [id])
-  subjectId String
-  room      Room?    @relation(fields: [roomId], references: [id])
-  roomId    String?
-  teacher   Teacher  @relation(fields: [teacherId], references: [id])
-  teacherId String
+  id              String        @id @default(cuid())
+  shift           Shift         @relation(fields: [shiftId], references: [id])
+  shiftId         String
+  class           Class         @relation(fields: [classId], references: [id])
+  classId         String
+  section         Section       @relation(fields: [sectionId], references: [id])
+  sectionId       String
+  subject         Subject       @relation(fields: [subjectId], references: [id])
+  subjectId       String
+  room            Room?         @relation(fields: [roomId], references: [id])
+  roomId          String?
+  teacher         Teacher       @relation(fields: [teacherId], references: [id])
+  teacherId       String
   /// "First teacher": the one who takes the section's daily attendance.
   /// At most one per section (enforced in the service); the admin-set
   /// Section.attendanceTakerId override still wins over this flag.
-  takesAttendance Boolean @default(false)
-  slots     RoutineSlot[]
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  takesAttendance Boolean       @default(false)
+  slots           RoutineSlot[]
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
 
   @@unique([sectionId, subjectId])
   @@index([teacherId])
@@ -445,17 +454,17 @@ model ClassAssignment {
 }
 
 model Attendance {
-  id         String           @id @default(cuid())
-  student    Student          @relation(fields: [studentId], references: [id])
-  studentId  String
-  section    Section          @relation(fields: [sectionId], references: [id])
-  sectionId  String
-  date       DateTime         @db.Date
-  status     AttendanceStatus
-  takenBy    Teacher?         @relation(fields: [takenById], references: [id])
-  takenById  String?
-  createdAt  DateTime         @default(now())
-  updatedAt  DateTime         @updatedAt
+  id        String           @id @default(cuid())
+  student   Student          @relation(fields: [studentId], references: [id])
+  studentId String
+  section   Section          @relation(fields: [sectionId], references: [id])
+  sectionId String
+  date      DateTime         @db.Date
+  status    AttendanceStatus
+  takenBy   Teacher?         @relation(fields: [takenById], references: [id])
+  takenById String?
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
 
   @@unique([studentId, date])
   @@index([sectionId, date])
@@ -463,21 +472,21 @@ model Attendance {
 }
 
 model FeeStructure {
-  id        String   @id @default(cuid())
+  id        String    @id @default(cuid())
   name      String
-  class     Class    @relation(fields: [classId], references: [id])
+  class     Class     @relation(fields: [classId], references: [id])
   classId   String
-  shift     Shift    @relation(fields: [shiftId], references: [id])
+  shift     Shift     @relation(fields: [shiftId], references: [id])
   shiftId   String
   year      Int
   /// Integer paisa — never float (db-schema.md).
   amount    Int
   /// admission = charged once when a student is admitted; monthly = generated
   /// every month by the accountant; other = ad-hoc (exam fee, trip, …).
-  kind      FeeKind  @default(other)
+  kind      FeeKind   @default(other)
   invoices  Invoice[]
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
   deletedAt DateTime?
 
   @@index([classId])
@@ -485,20 +494,20 @@ model FeeStructure {
 }
 
 model Invoice {
-  id             String        @id @default(cuid())
-  student        Student       @relation(fields: [studentId], references: [id])
+  id             String          @id @default(cuid())
+  student        Student         @relation(fields: [studentId], references: [id])
   studentId      String
-  feeStructure   FeeStructure  @relation(fields: [feeStructureId], references: [id])
+  feeStructure   FeeStructure    @relation(fields: [feeStructureId], references: [id])
   feeStructureId String
   term           String
   amountDue      Int
-  amountPaid     Int           @default(0)
-  status         InvoiceStatus @default(unpaid)
-  dueDate        DateTime      @db.Date
+  amountPaid     Int             @default(0)
+  status         InvoiceStatus   @default(unpaid)
+  dueDate        DateTime        @db.Date
   payments       Payment[]
   onlinePayments OnlinePayment[]
-  createdAt      DateTime      @default(now())
-  updatedAt      DateTime      @updatedAt
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
 
   @@index([studentId])
   @@index([feeStructureId])
@@ -518,17 +527,17 @@ model Payment {
 }
 
 model Notice {
-  id           String          @id @default(cuid())
-  title        String
+  id          String         @id @default(cuid())
+  title       String
   /// Sanitized with DOMPurify server-side before write (cms-domain.md).
-  bodyHtml     String
-  audience     NoticeAudience  @default(all)
-  publishedAt  DateTime?
-  createdBy    User            @relation(fields: [createdById], references: [id])
-  createdById  String
-  createdAt    DateTime        @default(now())
-  updatedAt    DateTime        @updatedAt
-  deletedAt    DateTime?
+  bodyHtml    String
+  audience    NoticeAudience @default(all)
+  publishedAt DateTime?
+  createdBy   User           @relation(fields: [createdById], references: [id])
+  createdById String
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  deletedAt   DateTime?
 
   @@index([audience])
   @@index([publishedAt])
@@ -550,14 +559,14 @@ model Event {
 
 /// Parent inquiry, ticket-style (MASTER_PLAN.md Phase 2).
 model InquiryTicket {
-  id          String         @id @default(cuid())
+  id          String          @id @default(cuid())
   subject     String
-  status      TicketStatus   @default(open)
-  createdBy   User           @relation(fields: [createdById], references: [id])
+  status      TicketStatus    @default(open)
+  createdBy   User            @relation(fields: [createdById], references: [id])
   createdById String
   messages    TicketMessage[]
-  createdAt   DateTime       @default(now())
-  updatedAt   DateTime       @updatedAt
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
 
   @@index([createdById])
   @@index([status])
@@ -654,31 +663,60 @@ model Submission {
 /// Exam → Marks entry → Result compute → Publish (lms-domain.md).
 /// "Result compute" here is simply the marks themselves, surfaced once
 /// publishedAt is set — no separate aggregate Result model in this phase.
-model Exam {
-  id          String   @id @default(cuid())
+/// One school-wide assessment round for a class (e.g. "Mid-term 2026", Class 6).
+/// Admin/coordinator create it; it fans out into one Exam per section x subject.
+/// Results publish automatically once EVERY Exam in the session is approved.
+model ExamSession {
+  id          String    @id @default(cuid())
   name        String
-  type        ExamType
-  subject     Subject  @relation(fields: [subjectId], references: [id])
-  subjectId   String
-  section     Section  @relation(fields: [sectionId], references: [id])
-  sectionId   String
-  examDate    DateTime @db.Date
-  maxMarks    Float
+  term        ExamTerm
+  class       Class     @relation(fields: [classId], references: [id])
+  classId     String
+  createdById String?
   publishedAt DateTime?
-  marks       Mark[]
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  exams       Exam[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
   deletedAt   DateTime?
+
+  @@index([classId])
+}
+
+model Exam {
+  id               String       @id @default(cuid())
+  name             String
+  type             ExamType
+  subject          Subject      @relation(fields: [subjectId], references: [id])
+  subjectId        String
+  section          Section      @relation(fields: [sectionId], references: [id])
+  sectionId        String
+  examDate         DateTime     @db.Date
+  maxMarks         Float
+  session          ExamSession? @relation(fields: [sessionId], references: [id])
+  sessionId        String?
+  /// Teacher finished entering marks and sent them for approval.
+  marksSubmittedAt DateTime?
+  /// Coordinator / admin approved the marks.
+  approvedAt       DateTime?
+  approvedById     String?
+  /// Reason shown to the teacher when the marks were sent back.
+  returnNote       String?
+  publishedAt      DateTime?
+  marks            Mark[]
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+  deletedAt        DateTime?
 
   @@index([sectionId])
   @@index([subjectId])
+  @@index([sessionId])
 }
 
 model Mark {
-  id            String  @id @default(cuid())
-  exam          Exam    @relation(fields: [examId], references: [id])
+  id            String   @id @default(cuid())
+  exam          Exam     @relation(fields: [examId], references: [id])
   examId        String
-  student       Student @relation(fields: [studentId], references: [id])
+  student       Student  @relation(fields: [studentId], references: [id])
   studentId     String
   marksObtained Float
   comment       String?
@@ -698,26 +736,26 @@ model Mark {
 /// bonuses. Payslip generated." (the payslip is this row, rendered as a
 /// printable view on the frontend — no PDF binary generated server-side yet).
 model Salary {
-  id          String    @id @default(cuid())
-  staff       User      @relation(fields: [staffId], references: [id])
-  staffId     String
-  month       Int
-  year        Int
+  id         String    @id @default(cuid())
+  staff      User      @relation(fields: [staffId], references: [id])
+  staffId    String
+  month      Int
+  year       Int
   /// All amounts integer paisa (db-schema.md).
-  baseAmount  Int
-  deductions  Int       @default(0)
-  bonuses     Int       @default(0)
-  netAmount   Int
-  paidAt      DateTime?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  baseAmount Int
+  deductions Int       @default(0)
+  bonuses    Int       @default(0)
+  netAmount  Int
+  paidAt     DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
 
   @@unique([staffId, month, year])
   @@index([staffId])
 }
 
 model Book {
-  id              String       @id @default(cuid())
+  id              String      @id @default(cuid())
   title           String
   author          String
   isbn            String?
@@ -727,8 +765,8 @@ model Book {
   priceForSale    Int?
   issues          BookIssue[]
   sales           BookSale[]
-  createdAt       DateTime     @default(now())
-  updatedAt       DateTime     @updatedAt
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
   deletedAt       DateTime?
 }
 
@@ -749,14 +787,14 @@ model BookIssue {
 }
 
 model BookSale {
-  id        String   @id @default(cuid())
-  book      Book     @relation(fields: [bookId], references: [id])
-  bookId    String
-  buyer     User     @relation(fields: [buyerId], references: [id])
-  buyerId   String
-  quantity  Int
-  amount    Int
-  soldAt    DateTime @default(now())
+  id       String   @id @default(cuid())
+  book     Book     @relation(fields: [bookId], references: [id])
+  bookId   String
+  buyer    User     @relation(fields: [buyerId], references: [id])
+  buyerId  String
+  quantity Int
+  amount   Int
+  soldAt   DateTime @default(now())
 
   @@index([bookId])
   @@index([buyerId])
@@ -807,17 +845,17 @@ enum Weekday {
 /// One bell-schedule period of a shift ("Period 1  08:00-08:45", or a break).
 /// startTime/endTime are zero-padded "HH:MM" so they compare as strings.
 model Period {
-  id        String   @id @default(cuid())
+  id        String        @id @default(cuid())
   name      String
-  shift     Shift    @relation(fields: [shiftId], references: [id])
+  shift     Shift         @relation(fields: [shiftId], references: [id])
   shiftId   String
   startTime String
   endTime   String
-  sortOrder Int      @default(0)
-  isBreak   Boolean  @default(false)
+  sortOrder Int           @default(0)
+  isBreak   Boolean       @default(false)
   slots     RoutineSlot[]
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
 
   @@index([shiftId])
 }
@@ -935,23 +973,23 @@ enum AdmissionStatus {
 /// Submitted from the public Admission page; an admin reviews it and, on
 /// approval, it is turned into a real Student (+ guardian + invoices).
 model AdmissionApplication {
-  id            String          @id @default(cuid())
-  studentName   String
-  dateOfBirth   DateTime?       @db.Date
-  gender        String?
-  appliedClass  Class?          @relation(fields: [appliedClassId], references: [id])
+  id             String          @id @default(cuid())
+  studentName    String
+  dateOfBirth    DateTime?       @db.Date
+  gender         String?
+  appliedClass   Class?          @relation(fields: [appliedClassId], references: [id])
   appliedClassId String?
   previousSchool String?
-  guardianName  String
-  guardianPhone String
-  guardianEmail String
-  address       String?
-  message       String?
-  status        AdmissionStatus @default(new)
-  studentId     String?
-  reviewNote    String?
-  createdAt     DateTime        @default(now())
-  updatedAt     DateTime        @updatedAt
+  guardianName   String
+  guardianPhone  String
+  guardianEmail  String
+  address        String?
+  message        String?
+  status         AdmissionStatus @default(new)
+  studentId      String?
+  reviewNote     String?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
 
   @@index([status])
   @@index([appliedClassId])

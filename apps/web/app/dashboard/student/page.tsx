@@ -26,17 +26,21 @@ import { submitAssignmentSchema } from "@packages/shared-types";
 import { useNotices } from "@/lib/hooks/use-engagement";
 import { useResources } from "@/lib/hooks/use-resources";
 import { useAssignments, useSubmissions, useSubmitAssignment } from "@/lib/hooks/use-assignments";
-import { useExams, useMarks } from "@/lib/hooks/use-exams";
+import { MyResults } from "@/components/exams/my-results";
 import { ApiError } from "@/lib/api-client";
 import { MyRoutine } from "@/components/routine/my-routine";
+import { useUrlTab } from "@/lib/use-url-tab";
+
+const TAB_VALUES = ["overview", "performance", "routine", "notices", "resources", "assignments", "results", "fees"] as const;
 
 export default function StudentDashboardPage() {
+  const [tab, setTab] = useUrlTab("tab", "overview", TAB_VALUES);
   const me = useSelectedChild();
   return (
     <div>
       <PaymentReturnNotice />
       <PageHeader title="My learning" description="Notices, materials, assignments and results." />
-      <Tabs defaultValue="overview">
+      <Tabs value={tab} onValueChange={setTab}>
         <TabsList>
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="performance">Performance</TabsTrigger>
@@ -208,45 +212,6 @@ function SubmissionForm({ assignmentId }: { assignmentId: string }) {
 }
 
 function ResultsPanel() {
-  const exams = useExams();
-  const [selected, setSelected] = React.useState<string | null>(null);
-
-  if (exams.isLoading) return <LoadingSkeleton rows={3} />;
-  if (!exams.data?.items.length) return <EmptyState title="No published results yet" />;
-
-  return (
-    <div className="flex flex-col gap-3">
-      {exams.data.items.map((e) => (
-        <Card key={e.id}>
-          <CardContent className="flex items-center justify-between pt-5">
-            <div>
-              <p className="text-sm font-semibold text-slate-800">{e.name}</p>
-              <p className="text-xs text-slate-400">{e.subjectName} · {e.examDate}</p>
-            </div>
-            <Button variant="outline" size="sm" onClick={() => setSelected(selected === e.id ? null : e.id)}>
-              {selected === e.id ? "Hide" : "View mark"}
-            </Button>
-          </CardContent>
-          {selected === e.id && <MyMark examId={e.id} maxMarks={e.maxMarks} />}
-        </Card>
-      ))}
-    </div>
-  );
+  return <MyResults />;
 }
 
-function MyMark({ examId, maxMarks }: { examId: string; maxMarks: number }) {
-  const marks = useMarks(examId);
-  const mine = marks.data?.items[0];
-  return (
-    <CardContent className="pt-0">
-      {mine ? (
-        <p className="text-sm font-medium text-slate-700">
-          Score: {mine.marksObtained} / {maxMarks}
-          {mine.comment && <span className="ml-2 text-slate-500">— {mine.comment}</span>}
-        </p>
-      ) : (
-        <p className="text-sm text-slate-400">No mark recorded.</p>
-      )}
-    </CardContent>
-  );
-}

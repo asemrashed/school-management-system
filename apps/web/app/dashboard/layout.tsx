@@ -29,6 +29,7 @@ const NAV_ITEMS: NavItem[] = [
   { href: "/dashboard/admin", label: "Administration", icon: Users, allow: DASHBOARD_ACCESS["/dashboard/admin"] },
   { href: "/dashboard/accountant", label: "Fees & Salary", icon: Wallet, allow: DASHBOARD_ACCESS["/dashboard/accountant"] },
   { href: "/dashboard/librarian", label: "Library", icon: BookOpen, allow: DASHBOARD_ACCESS["/dashboard/librarian"] },
+  { href: "/dashboard/coordinator", label: "Academics", icon: GraduationCap, allow: DASHBOARD_ACCESS["/dashboard/coordinator"] },
   { href: "/dashboard/teacher", label: "Classes", icon: MessageSquareText, allow: DASHBOARD_ACCESS["/dashboard/teacher"] },
   { href: "/dashboard/parent", label: "My Children", icon: Users, allow: DASHBOARD_ACCESS["/dashboard/parent"] },
   { href: "/dashboard/student", label: "My Learning", icon: GraduationCap, allow: DASHBOARD_ACCESS["/dashboard/student"] },
@@ -37,7 +38,7 @@ const NAV_ITEMS: NavItem[] = [
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { data } = useSession();
+  const { data, isLoading: sessionLoading } = useSession();
   const logout = useLogout();
   const user = data?.user ?? null;
 
@@ -48,7 +49,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       router.replace(ROLE_HOME[user.role as Role] ?? "/dashboard");
     }
   }, [user, pathname, router]);
-  const blocked = Boolean(user) && !canAccessPath(user!.role as Role, pathname);
+  // Render nothing until we know who this is, so a page the role may not use
+  // never mounts (and never fires its API calls) before the guard redirects.
+  React.useEffect(() => {
+    if (!sessionLoading && !user) router.replace("/login");
+  }, [sessionLoading, user, router]);
+  const blocked = !user || !canAccessPath(user.role as Role, pathname);
 
   async function handleLogout() {
     await logout.mutateAsync();
@@ -90,7 +96,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             </Button>
           </div>
         </header>
-        <main className="flex-1 p-6">{blocked ? null : children}</main>
+        <main className="flex-1 p-6">
+          {/* useSearchParams (URL tabs) needs a Suspense boundary for static builds. */}
+          <React.Suspense fallback={null}>{blocked ? null : children}</React.Suspense>
+        </main>
       </div>
     </div>
   );

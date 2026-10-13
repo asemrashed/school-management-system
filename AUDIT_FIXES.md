@@ -89,3 +89,19 @@ Teachers were scoped by *section*, so two teachers of one section saw each other
 - Student performance: a teacher sees only results for subjects they teach.
 - Attendance read: only the delegated attendance taker.
 - Admin-tier roles and students/parents are unchanged. Test: `tests/19-teacher-scope.test.ts`.
+
+## Part 2 — exams, approval workflow, results
+- New: `ExamSession` (one per class per exam round; fans out to section x subject `Exam` rows). Exam gains `sessionId`, `marksSubmittedAt`, `approvedAt`, `approvedById`, `returnNote`. **Run `npm run prisma:migrate` (name: exam_sessions).**
+- Only admin / coordinator create exams. Teachers enter marks for their subjects and **Submit for approval**.
+- Coordinator (or admin / super admin) **approves or returns** each subject with a note. When the last exam of a session is approved the result **publishes automatically** and guardians are notified. `POST /exams/publish` was removed.
+- Result sheet (`GET /exam-sessions/:id/results`): spreadsheet view, server-side filter (section, search, pass/fail), sort, pagination, CSV export. Teachers get only their own subject column.
+- Student / parent: report cards (`GET /exam-sessions/mine`) with total, %, grade, GPA (BD scale, `lib/grading.ts`).
+- Dashboards: teaching pages (resources, homework, marks) are teacher-only; coordinator has its own `/dashboard/coordinator`. Layout no longer mounts a page before the role is known.
+- Demo seed: exams belong to sessions; "Final Exam 2026" (Class 6) is left open so the workflow can be tried.
+- Tests: `tests/20-exam-workflow.test.ts`.
+
+## Part 3 — typing bug + URL tabs
+- **Reversed typing ("Hey" -> "yeH")**: the shared `RichTextEditor` re-rendered its own HTML on every keystroke, resetting the caret to the start. It affected BOTH the Notice form and the CMS page form (the only two uses). Now the DOM is only written when the value changes from outside. Paste is plain-text only.
+- **Tabs live in the URL**: `?tab=students`, nested `&sub=rooms` (Academic Setup, Routine, Website). Refresh, back/forward and shared links keep the page. Unknown / not-permitted values fall back to the default tab. Hook: `apps/web/lib/use-url-tab.ts`. The dashboard layout wraps pages in `<Suspense>` (needed by `useSearchParams` in static builds).
+- After a payment gateway return the student/parent lands on the Fees tab.
+- `TabsTrigger` now honours a custom `className`.

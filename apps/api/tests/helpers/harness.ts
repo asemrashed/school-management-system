@@ -153,3 +153,11 @@ export async function loginAs(email: string) {
   return c;
 }
 export const emailOf = (u: { email: string }) => u.email;
+
+/** Full approval chain for one exam: teacher submits, coordinator approves (auto-publishes a stand-alone exam). */
+export async function submitAndApprove(teacher: Client, examId: string, approverEmail: string) {
+  const sub = await teacher.post(`/exams/${examId}/submit`);
+  if (sub.status !== 200) return sub;
+  const approver = await loginAs(approverEmail);
+  return approver.post(`/exams/${examId}/approve`);
+}

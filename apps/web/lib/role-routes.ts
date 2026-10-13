@@ -12,7 +12,9 @@ export const DASHBOARD_ACCESS: Record<string, Role[]> = {
   "/dashboard/admin": ["super_admin", "admin"],
   "/dashboard/accountant": ["super_admin", "admin", "accountant"],
   "/dashboard/librarian": ["super_admin", "admin", "librarian"],
-  "/dashboard/teacher": ["super_admin", "admin", "coordinator", "teacher"],
+  // Teaching tools (resources, homework, marks entry) belong to teachers only.
+  "/dashboard/teacher": ["teacher"],
+  "/dashboard/coordinator": ["coordinator"],
   "/dashboard/parent": ["parent"],
   "/dashboard/student": ["student"],
 };
@@ -21,7 +23,7 @@ export const DASHBOARD_ACCESS: Record<string, Role[]> = {
 export const ROLE_HOME: Record<Role, string> = {
   super_admin: "/dashboard/admin",
   admin: "/dashboard/admin",
-  coordinator: "/dashboard/teacher",
+  coordinator: "/dashboard/coordinator",
   teacher: "/dashboard/teacher",
   accountant: "/dashboard/accountant",
   librarian: "/dashboard/librarian",

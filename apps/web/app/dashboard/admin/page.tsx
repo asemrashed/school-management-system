@@ -1,5 +1,7 @@
 "use client";
 
+import { ExamManagement } from "@/components/exams/exam-management";
+import { ResultSheet } from "@/components/exams/result-sheet";
 import * as React from "react";
 import { Plus } from "lucide-react";
 import {
@@ -56,6 +58,9 @@ import { RoutineAdminPanel } from "@/components/admin/routine-admin-panel";
 import { RoleLimitsPanel } from "@/components/admin/role-limits-panel";
 import { StudentsPanel } from "@/components/admin/students-panel";
 import { WebsitePanel } from "@/components/admin/website-panel";
+import { useUrlTab } from "@/lib/use-url-tab";
+
+const TAB_VALUES = ["users", "students", "setup", "assignments", "routine", "exams", "results", "limits", "notices", "events", "website", "cms", "reports"] as const;
 
 const CREATABLE_ROLES: Role[] = ["admin", "coordinator", "teacher", "accountant", "librarian"];
 
@@ -75,16 +80,21 @@ export default function AdminDashboardPage() {
   const isSuperAdmin = session.data?.user?.role === "super_admin";
   // The API only lets Super Admin / Admin edit the website; coordinators never see the tab.
   const canEditWebsite = isSuperAdmin || session.data?.user?.role === "admin";
+  // A URL asking for a tab this role cannot see falls back to the default tab.
+  const allowedTabs = TAB_VALUES.filter((t) => (t !== "limits" || isSuperAdmin) && (t !== "website" || canEditWebsite));
+  const [tab, setTab] = useUrlTab("tab", "users", allowedTabs);
   return (
     <div>
       <PageHeader title="Administration" description="Users, students and admissions, academic setup, website, notices and events." />
-      <Tabs defaultValue="users">
+      <Tabs value={tab} onValueChange={setTab}>
         <TabsList>
           <TabsTrigger value="users">Users & Messaging</TabsTrigger>
           <TabsTrigger value="students">Students & Admissions</TabsTrigger>
           <TabsTrigger value="setup">Academic Setup</TabsTrigger>
           <TabsTrigger value="assignments">Teacher Assignments</TabsTrigger>
           <TabsTrigger value="routine">Routine</TabsTrigger>
+          <TabsTrigger value="exams">Exams</TabsTrigger>
+          <TabsTrigger value="results">Results</TabsTrigger>
           {isSuperAdmin && <TabsTrigger value="limits">Role Limits</TabsTrigger>}
           <TabsTrigger value="notices">Notices</TabsTrigger>
           <TabsTrigger value="events">Events</TabsTrigger>
@@ -104,6 +114,12 @@ export default function AdminDashboardPage() {
         </TabsContent>
         <TabsContent value="assignments">
           <AssignmentsPanel />
+        </TabsContent>
+        <TabsContent value="exams">
+          <ExamManagement />
+        </TabsContent>
+        <TabsContent value="results">
+          <ResultSheet />
         </TabsContent>
         <TabsContent value="routine">
           <RoutineAdminPanel />

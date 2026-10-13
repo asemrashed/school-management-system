@@ -15,6 +15,7 @@ import {
   Badge,
   Button,
   FormModal,
+  ConfirmDialog,
   DataTable,
   Tabs,
   TabsList,
@@ -28,10 +29,10 @@ import {
   createResourceSchema,
   createAssignmentSchema,
   gradeSubmissionSchema,
-  createExamSchema,
   RESOURCE_KINDS,
   type ResourceKind,
-  type ExamType,
+  type ExamDto,
+  type ExamStatus,
 } from "@packages/shared-types";
 import { useSession } from "@/lib/hooks/use-auth";
 import { AttendanceWidget } from "@/components/attendance/attendance-widget";
@@ -40,9 +41,15 @@ import { useClassAssignments, useSectionRoster, useAttendanceSections } from "@/
 import { MyRoutine } from "@/components/routine/my-routine";
 import { useResources, useCreateResource } from "@/lib/hooks/use-resources";
 import { useAssignments, useCreateAssignment, useSubmissions, useGradeSubmission } from "@/lib/hooks/use-assignments";
-import { useExams, useCreateExam, useMarks, useSubmitMarks, usePublishExam } from "@/lib/hooks/use-exams";
+import { useExams, useMarks, useSubmitMarks } from "@/lib/hooks/use-exams";
+import { useSubmitExam } from "@/lib/hooks/use-exam-sessions";
+import { ResultSheet } from "@/components/exams/result-sheet";
+import { errorMessage } from "@/lib/errors";
 
 import { TodayPanel, localIsoDate } from "@/components/attendance/today-panel";
+import { useUrlTab } from "@/lib/use-url-tab";
+
+const TAB_VALUES = ["today", "attendance", "routine", "resources", "assignments", "exams", "results"] as const;
 
 // The teacher's local calendar date: toISOString() is UTC and is "yesterday" for Dhaka until 6 AM.
 const todayIso = localIsoDate;
@@ -75,7 +82,7 @@ function useMySections() {
 
 export default function TeacherDashboardPage() {
   const session = useSession();
-  const [tab, setTab] = React.useState("today");
+  const [tab, setTab] = useUrlTab("tab", "today", TAB_VALUES);
   const [requested, setRequested] = React.useState("");
   const firstName = session.data?.user?.name?.split(" ")[0];
   const hour = new Date().getHours();
@@ -91,6 +98,7 @@ export default function TeacherDashboardPage() {
           <TabsTrigger value="resources">Resources</TabsTrigger>
           <TabsTrigger value="assignments">Assignments</TabsTrigger>
           <TabsTrigger value="exams">Exams</TabsTrigger>
+          <TabsTrigger value="results">Results</TabsTrigger>
         </TabsList>
         <TabsContent value="today">
           <TodayPanel onTakeAttendance={(id) => { setRequested(id); setTab("attendance"); }} />
@@ -109,6 +117,9 @@ export default function TeacherDashboardPage() {
         </TabsContent>
         <TabsContent value="exams">
           <ExamsPanel />
+        </TabsContent>
+        <TabsContent value="results">
+          <ResultSheet />
         </TabsContent>
       </Tabs>
     </div>
@@ -497,111 +508,42 @@ function SubmissionsPanel({ assignmentId, onClose }: { assignmentId: string; onC
 }
 
 // --- Exams ---
+// Exams are scheduled by the school (admin / coordinator). A teacher only
+// enters marks for the subjects they teach and submits them for approval.
+
+const EXAM_STATUS: Record<ExamStatus, { label: string; variant: "muted" | "warning" | "default" | "success" }> = {
+  draft: { label: "Enter marks", variant: "muted" },
+  submitted: { label: "Awaiting approval", variant: "warning" },
+  approved: { label: "Approved", variant: "default" },
+  published: { label: "Published", variant: "success" },
+};
 
 function ExamsPanel() {
-  const { toast } = useToast();
-  const { options, sectionId, setSectionId, current, isLoading } = useMySections();
-  const exams = useExams(sectionId);
-  const createExam = useCreateExam();
-  const [open, setOpen] = React.useState(false);
+  const exams = useExams();
   const [selected, setSelected] = React.useState<string | null>(null);
-  const [form, setForm] = React.useState({ name: "", type: "offline" as ExamType, subjectId: "", examDate: todayIso(), maxMarks: 100 });
-
-  async function handleCreate(e: React.FormEvent) {
-    e.preventDefault();
-    if (!current) return;
-    const parsed = createExamSchema.safeParse({ ...form, sectionId: current.id });
-    if (!parsed.success) {
-      toast({ title: "Check the form", description: parsed.error.issues[0]?.message, variant: "error" });
-      return;
-    }
-    try {
-      await createExam.mutateAsync(parsed.data);
-      toast({ title: "Exam created", variant: "success" });
-      setOpen(false);
-    } catch (err) {
-      const message = err instanceof ApiError ? err.message : "Could not create the exam.";
-      toast({ title: "Could not create", description: message, variant: "error" });
-    }
-  }
-
-  if (isLoading) return null;
-  if (options.length === 0) return <EmptyState title="No sections assigned yet" />;
+  const current = (exams.data?.items ?? []).find((e) => e.id === selected) ?? null;
 
   return (
     <div className="flex flex-col gap-4">
-      <PageHeader
-        title="Exams"
-        actions={
-          <div className="flex items-center gap-2">
-            <Select value={sectionId} onChange={(e) => setSectionId(e.target.value)}>
-              {options.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.label}
-                </option>
-              ))}
-            </Select>
-            <FormModal
-              open={open}
-              onOpenChange={setOpen}
-              title="New exam"
-              trigger={
-                <Button size="sm">
-                  <Plus className="h-4 w-4" /> New exam
-                </Button>
-              }
-            >
-              <form onSubmit={handleCreate} className="flex flex-col gap-4">
-                <div className="flex flex-col gap-1.5">
-                  <Label htmlFor="ex-name">Name</Label>
-                  <Input id="ex-name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
-                </div>
-                <div className="flex flex-col gap-1.5">
-                  <Label htmlFor="ex-subject">Subject</Label>
-                  <Select id="ex-subject" value={form.subjectId} onChange={(e) => setForm({ ...form, subjectId: e.target.value })}>
-                    <option value="">Select a subject</option>
-                    {current?.subjects.map((s) => (
-                      <option key={s.id} value={s.id}>
-                        {s.name}
-                      </option>
-                    ))}
-                  </Select>
-                </div>
-                <div className="flex flex-col gap-1.5">
-                  <Label htmlFor="ex-type">Type</Label>
-                  <Select id="ex-type" value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value as ExamType })}>
-                    <option value="offline">Offline</option>
-                    <option value="online">Online</option>
-                  </Select>
-                </div>
-                <div className="flex flex-col gap-1.5">
-                  <Label htmlFor="ex-date">Date</Label>
-                  <Input id="ex-date" type="date" value={form.examDate} onChange={(e) => setForm({ ...form, examDate: e.target.value })} />
-                </div>
-                <div className="flex flex-col gap-1.5">
-                  <Label htmlFor="ex-max">Max marks</Label>
-                  <Input id="ex-max" type="number" value={form.maxMarks} onChange={(e) => setForm({ ...form, maxMarks: Number(e.target.value) })} />
-                </div>
-                <Button type="submit" disabled={createExam.isPending} className="mt-2">
-                  {createExam.isPending ? "Creating..." : "Create exam"}
-                </Button>
-              </form>
-            </FormModal>
-          </div>
-        }
-      />
+      <PageHeader title="Exams" description="Enter marks for your subjects, then submit them to the coordinator for approval." />
       <DataTable
         columns={[
-          { key: "name", header: "Name", render: (e) => e.name },
+          { key: "name", header: "Exam", render: (e) => e.name },
           { key: "subject", header: "Subject", render: (e) => e.subjectName },
+          { key: "section", header: "Section", render: (e) => e.sectionName },
           { key: "date", header: "Date", render: (e) => e.examDate },
-          { key: "status", header: "Status", render: (e) => <Badge variant={e.publishedAt ? "success" : "muted"}>{e.publishedAt ? "Published" : "Draft"}</Badge> },
           {
-            key: "actions",
-            header: "",
-            render: (e) => (
+            key: "status", header: "Status", render: (e) => (
+              <div>
+                <Badge variant={EXAM_STATUS[e.status].variant}>{EXAM_STATUS[e.status].label}</Badge>
+                {e.status === "draft" && e.returnNote && <p className="mt-1 max-w-xs text-xs text-amber-700">Returned: {e.returnNote}</p>}
+              </div>
+            ),
+          },
+          {
+            key: "actions", header: "", render: (e) => (
               <Button variant="outline" size="sm" onClick={() => setSelected(e.id)}>
-                Marks
+                {e.status === "draft" ? "Marks" : "View"}
               </Button>
             ),
           },
@@ -611,22 +553,23 @@ function ExamsPanel() {
         isLoading={exams.isLoading}
         isError={exams.isError}
         onRetry={() => exams.refetch()}
-        emptyTitle="No exams yet"
+        emptyTitle="No exams for your subjects yet"
+        emptyDescription="When the school schedules an exam for a class you teach, it shows up here."
       />
-      {selected && current && (
-        <MarksPanel examId={selected} sectionId={current.id} onClose={() => setSelected(null)} />
-      )}
+      {current && <MarksPanel exam={current} onClose={() => setSelected(null)} />}
     </div>
   );
 }
 
-function MarksPanel({ examId, sectionId, onClose }: { examId: string; sectionId: string; onClose: () => void }) {
+function MarksPanel({ exam, onClose }: { exam: ExamDto; onClose: () => void }) {
   const { toast } = useToast();
-  const roster = useSectionRoster(sectionId);
-  const marks = useMarks(examId);
+  const roster = useSectionRoster(exam.sectionId);
+  const marks = useMarks(exam.id);
   const submitMarks = useSubmitMarks();
-  const publishExam = usePublishExam();
+  const submitExam = useSubmitExam();
   const [entries, setEntries] = React.useState<Record<string, string>>({});
+  const [confirm, setConfirm] = React.useState(false);
+  const locked = exam.status !== "draft";
 
   React.useEffect(() => {
     if (!marks.data) return;
@@ -635,58 +578,76 @@ function MarksPanel({ examId, sectionId, onClose }: { examId: string; sectionId:
     setEntries(next);
   }, [marks.data]);
 
-  async function handleSave() {
-    const entryList = (roster.data?.items ?? []).map((s) => ({
-      studentId: s.id,
-      marksObtained: Number(entries[s.id] ?? 0),
-    }));
+  const students = roster.data?.items ?? [];
+  const invalid = (id: string) => {
+    const v = entries[id];
+    if (v === undefined || v === "") return false;
+    const n = Number(v);
+    return !Number.isFinite(n) || n < 0 || n > exam.maxMarks;
+  };
+  const missing = students.filter((s) => entries[s.id] === undefined || entries[s.id] === "").length;
+  const anyInvalid = students.some((s) => invalid(s.id));
+
+  async function save(): Promise<boolean> {
+    // Only rows the teacher actually filled — never silently store a 0 for a blank.
+    const list = students.filter((s) => entries[s.id] !== undefined && entries[s.id] !== "").map((s) => ({ studentId: s.id, marksObtained: Number(entries[s.id]) }));
+    if (list.length === 0) { toast({ title: "Enter at least one mark", variant: "error" }); return false; }
     try {
-      await submitMarks.mutateAsync({ examId, entries: entryList });
+      await submitMarks.mutateAsync({ examId: exam.id, entries: list });
       toast({ title: "Marks saved", variant: "success" });
+      return true;
     } catch (err) {
-      const message = err instanceof ApiError ? err.message : "Could not save marks.";
-      toast({ title: "Could not save", description: message, variant: "error" });
+      toast({ title: "Could not save", description: errorMessage(err), variant: "error" });
+      return false;
     }
   }
 
-  async function handlePublish() {
+  async function submitForApproval() {
+    setConfirm(false);
+    if (!(await save())) return;
     try {
-      await publishExam.mutateAsync(examId);
-      toast({ title: "Result published — guardians notified", variant: "success" });
+      await submitExam.mutateAsync(exam.id);
+      toast({ title: "Submitted for approval", description: "The coordinator will review your marks.", variant: "success" });
       onClose();
     } catch (err) {
-      const message = err instanceof ApiError ? err.message : "Could not publish.";
-      toast({ title: "Could not publish", description: message, variant: "error" });
+      toast({ title: "Could not submit", description: errorMessage(err), variant: "error" });
     }
   }
 
   return (
     <Card>
       <CardHeader className="flex-row items-center justify-between pb-3">
-        <CardTitle>Marks entry</CardTitle>
+        <CardTitle>{exam.subjectName} — {exam.sectionName} <span className="text-sm font-normal text-slate-500">(full marks {exam.maxMarks})</span></CardTitle>
         <Button variant="ghost" size="sm" onClick={onClose}>Close</Button>
       </CardHeader>
       <CardContent className="flex flex-col gap-3">
-        {(roster.data?.items ?? []).map((s) => (
+        {locked && <p className="rounded-md bg-slate-50 p-2 text-sm text-slate-600">These marks are {EXAM_STATUS[exam.status].label.toLowerCase()} and can no longer be edited.</p>}
+        {students.map((s) => (
           <div key={s.id} className="flex items-center justify-between gap-3">
             <p className="text-sm text-slate-700">{s.name} {s.rollNumber && <span className="text-slate-400">· Roll {s.rollNumber}</span>}</p>
             <Input
-              className="w-24"
-              type="number"
+              className={`w-24 ${invalid(s.id) ? "border-red-500" : ""}`}
+              type="number" min={0} max={exam.maxMarks} step="0.5" disabled={locked}
+              aria-label={`Marks for ${s.name}`} aria-invalid={invalid(s.id)}
               value={entries[s.id] ?? ""}
               onChange={(e) => setEntries({ ...entries, [s.id]: e.target.value })}
             />
           </div>
         ))}
-        <div className="mt-2 flex justify-end gap-2">
-          <Button variant="outline" onClick={handleSave} disabled={submitMarks.isPending}>
-            {submitMarks.isPending ? "Saving..." : "Save marks"}
-          </Button>
-          <Button onClick={handlePublish} disabled={publishExam.isPending}>
-            {publishExam.isPending ? "Publishing..." : "Publish result"}
-          </Button>
-        </div>
+        {!locked && (
+          <div className="mt-2 flex flex-wrap items-center justify-end gap-2">
+            {missing > 0 && <span className="mr-auto text-xs text-slate-500">{missing} student(s) still blank</span>}
+            {anyInvalid && <span className="mr-auto text-xs text-red-600">Marks must be between 0 and {exam.maxMarks}.</span>}
+            <Button variant="outline" onClick={save} disabled={submitMarks.isPending || anyInvalid}>{submitMarks.isPending ? "Saving..." : "Save draft"}</Button>
+            <Button onClick={() => setConfirm(true)} disabled={submitExam.isPending || anyInvalid || missing > 0}>Submit for approval</Button>
+          </div>
+        )}
       </CardContent>
+      <ConfirmDialog
+        open={confirm} onOpenChange={setConfirm} variant="default" confirmLabel="Submit"
+        title="Submit these marks?" description="You cannot edit them afterwards unless the coordinator sends them back."
+        onConfirm={submitForApproval} loading={submitExam.isPending}
+      />
     </Card>
   );
 }
