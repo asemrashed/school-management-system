@@ -9,11 +9,14 @@ export const engagementRouter = Router();
 engagementRouter.use(requireAuth);
 
 engagementRouter.get("/notices", asyncHandler(engagement.listNotices));
-engagementRouter.post(
-  "/notices",
-  requireRole("super_admin", "admin", "coordinator"),
-  asyncHandler(engagement.createNotice)
-);
+const NOTICE_AUTHORS = ["super_admin", "admin", "coordinator", "teacher", "librarian"] as const;
+engagementRouter.get("/notices/mine", requireRole(...NOTICE_AUTHORS), asyncHandler(engagement.listMyNotices));
+engagementRouter.get("/notices/pending", requireRole("super_admin", "admin"), asyncHandler(engagement.listPendingNotices));
+// Staff submit (always lands as "pending"); admin / super admin publish directly.
+engagementRouter.post("/notices", requireRole(...NOTICE_AUTHORS), asyncHandler(engagement.createNotice));
+engagementRouter.patch("/notices/:id", requireRole(...NOTICE_AUTHORS), asyncHandler(engagement.updateNotice));
+engagementRouter.post("/notices/:id/approve", requireRole("super_admin", "admin"), asyncHandler(engagement.approveNotice));
+engagementRouter.post("/notices/:id/reject", requireRole("super_admin", "admin"), asyncHandler(engagement.rejectNotice));
 
 engagementRouter.get("/events", asyncHandler(engagement.listEvents));
 engagementRouter.post(

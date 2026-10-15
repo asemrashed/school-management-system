@@ -8,11 +8,13 @@ export function FooterCta() {
         <h2 className="max-w-md font-serif text-2xl font-semibold text-white sm:text-3xl">
           See it running on your own school's classes and sections.
         </h2>
-        <a href="#contact">
-          <Button size="lg" className="bg-brass-400 text-ink hover:bg-brass-500">
-            Book a demo
-          </Button>
-        </a>
+        <Button
+          size="lg"
+          className="bg-brass-400 text-ink hover:bg-brass-500"
+          asChild
+        >
+          <a href="#contact">Book a demo</a>
+        </Button>
       </div>
     </section>
   );
@@ -61,7 +63,10 @@ export function SiteFooter() {
               <ul className="mt-3 flex flex-col gap-2">
                 {col.links.map((link) => (
                   <li key={link.label}>
-                    <Link href={link.href} className="text-sm text-white/60 hover:text-white">
+                    <Link
+                      href={link.href}
+                      className="text-sm text-white/60 hover:text-white"
+                    >
                       {link.label}
                     </Link>
                   </li>
@@ -71,7 +76,8 @@ export function SiteFooter() {
           ))}
         </div>
         <div className="mt-10 border-t border-white/10 pt-6 text-xs text-white/40">
-          © {new Date().getFullYear()} School Portal. Built for Green Valley English Medium School.
+          © {new Date().getFullYear()} School Portal. Built for Green Valley
+          English Medium School.
         </div>
       </div>
     </footer>

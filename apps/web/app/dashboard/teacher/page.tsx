@@ -18,8 +18,6 @@ import {
   ConfirmDialog,
   DataTable,
   Tabs,
-  TabsList,
-  TabsTrigger,
   TabsContent,
   EmptyState,
   FileUploader,
@@ -47,9 +45,10 @@ import { ResultSheet } from "@/components/exams/result-sheet";
 import { errorMessage } from "@/lib/errors";
 
 import { TodayPanel, localIsoDate } from "@/components/attendance/today-panel";
+import { NoticesPanel } from "@/components/notices/notices-panel";
 import { useUrlTab } from "@/lib/use-url-tab";
 
-const TAB_VALUES = ["today", "attendance", "routine", "resources", "assignments", "exams", "results"] as const;
+const TAB_VALUES = ["today", "attendance", "routine", "resources", "assignments", "exams", "results", "notices"] as const;
 
 // The teacher's local calendar date: toISOString() is UTC and is "yesterday" for Dhaka until 6 AM.
 const todayIso = localIsoDate;
@@ -91,15 +90,6 @@ export default function TeacherDashboardPage() {
     <div>
       <PageHeader title={firstName ? `${greeting}, ${firstName}` : "Teaching"} description="Today's classes, attendance, materials, assignments and exams for your sections." />
       <Tabs value={tab} onValueChange={setTab}>
-        <TabsList>
-          <TabsTrigger value="today">Today</TabsTrigger>
-          <TabsTrigger value="attendance">Attendance</TabsTrigger>
-          <TabsTrigger value="routine">My Routine</TabsTrigger>
-          <TabsTrigger value="resources">Resources</TabsTrigger>
-          <TabsTrigger value="assignments">Assignments</TabsTrigger>
-          <TabsTrigger value="exams">Exams</TabsTrigger>
-          <TabsTrigger value="results">Results</TabsTrigger>
-        </TabsList>
         <TabsContent value="today">
           <TodayPanel onTakeAttendance={(id) => { setRequested(id); setTab("attendance"); }} />
         </TabsContent>
@@ -121,6 +111,7 @@ export default function TeacherDashboardPage() {
         <TabsContent value="results">
           <ResultSheet />
         </TabsContent>
+        <TabsContent value="notices"><NoticesPanel /></TabsContent>
       </Tabs>
     </div>
   );
@@ -234,7 +225,7 @@ function ResourcesPanel() {
         title="Materials"
         description="Upload a file or paste a link (Drive, YouTube, etc.)."
         actions={
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Select value={sectionId} onChange={(e) => setSectionId(e.target.value)}>
               {options.map((s) => (
                 <option key={s.id} value={s.id}>
@@ -354,7 +345,7 @@ function AssignmentsPanel() {
       <PageHeader
         title="Assignments"
         actions={
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Select value={sectionId} onChange={(e) => setSectionId(e.target.value)}>
               {options.map((s) => (
                 <option key={s.id} value={s.id}>

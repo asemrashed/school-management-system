@@ -16,7 +16,12 @@ const fraunces = Fraunces({
   weight: ["500", "600"],
 });
 
-export default function HomePage() {
+/**
+ * The SaaS-style product landing page (pitch to schools). Not routed right now:
+ * "/" serves the school's own CMS-driven home. To use it, render <SaaSHome />
+ * from a page, e.g. app/saas/page.tsx.
+ */
+export function SaaSHome() {
   return (
     <div className={`${fraunces.variable} bg-paper`}>
       <MarketingNavbar />

@@ -7,7 +7,9 @@ export function ContactSection() {
       <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
         <div className="grid grid-cols-1 gap-10 lg:grid-cols-[0.9fr_1.1fr]">
           <div>
-            <h2 className="font-serif text-3xl font-semibold text-ink">Book a demo</h2>
+            <h2 className="font-serif text-3xl font-semibold text-ink">
+              Book a demo
+            </h2>
             <p className="mt-3 text-ink/70">
               Tell us a bit about your school and we'll walk you through the
               portal with your own class structure in mind.
@@ -25,11 +27,15 @@ export function ContactSection() {
               <Phone className="h-4 w-4 text-brand-600" />
               Prefer a call? Include a good number to reach you in your email.
             </div>
-            <a href="mailto:info@greenvalleyschool.edu.bd?subject=School%20Portal%20demo%20request">
-              <Button size="lg" className="bg-brass-400 text-ink hover:bg-brass-500">
+            <Button
+              size="lg"
+              className="bg-brass-400 text-ink hover:bg-brass-500"
+              asChild
+            >
+              <a href="mailto:info@greenvalleyschool.edu.bd?subject=School%20Portal%20demo%20request">
                 Email us to book a demo
-              </Button>
-            </a>
+              </a>
+            </Button>
           </div>
         </div>
       </div>

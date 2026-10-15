@@ -29,8 +29,8 @@ describe("notices", () => {
     expect(mailbox()).toHaveLength(0);
     const list = await new Client().get("/engagement/notices"); // any authed user can list; use loginAs below instead since this route requires auth
   });
-  it("only admin/coordinator/super_admin may publish a notice", async () => {
-    for (const email of [w.teacherUser.email, w.parentUser.email, w.studentUser.email, w.accountant.email, w.librarian.email]) {
+  it("only staff authors may submit a notice — never parent, student or accountant", async () => {
+    for (const email of [w.parentUser.email, w.studentUser.email, w.accountant.email]) {
       const c = await loginAs(email);
       const r = await c.post("/engagement/notices", { title: "x", bodyHtml: "<p>y</p>", audience: "all" });
       expect(r.status).toBe(403);

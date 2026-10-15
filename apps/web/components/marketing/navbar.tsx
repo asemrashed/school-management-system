@@ -28,7 +28,9 @@ export function MarketingNavbar() {
       <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 sm:px-6">
         <Link href="#top" className="flex items-center gap-2">
           <BellMark />
-          <span className="font-serif text-lg font-semibold text-ink">School Portal</span>
+          <span className="font-serif text-lg font-semibold text-ink">
+            School Portal
+          </span>
         </Link>
 
         <nav className="hidden items-center gap-7 lg:flex">
@@ -63,19 +65,26 @@ export function MarketingNavbar() {
             )}
           </div>
           {NAV_LINKS.map((link) => (
-            <a key={link.href} href={link.href} className="text-sm text-ink/70 hover:text-ink">
+            <a
+              key={link.href}
+              href={link.href}
+              className="text-sm text-ink/70 hover:text-ink"
+            >
               {link.label}
             </a>
           ))}
         </nav>
 
         <div className="hidden items-center gap-3 lg:flex">
-          <a href="#contact" className="text-sm font-medium text-ink/70 hover:text-ink">
+          <a
+            href="#contact"
+            className="text-sm font-medium text-ink/70 hover:text-ink"
+          >
             Book a demo
           </a>
-          <Link href="/login">
-            <Button size="sm">Sign in</Button>
-          </Link>
+          <Button size="sm" asChild>
+            <Link href="/login">Sign in</Link>
+          </Button>
         </div>
 
         <button
@@ -84,14 +93,22 @@ export function MarketingNavbar() {
           aria-label="Toggle menu"
           onClick={() => setMobileOpen((v) => !v)}
         >
-          {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+          {mobileOpen ? (
+            <X className="h-5 w-5" />
+          ) : (
+            <Menu className="h-5 w-5" />
+          )}
         </button>
       </div>
 
       {mobileOpen && (
         <div className="border-t border-ink/10 bg-paper px-4 py-4 lg:hidden">
           <div className="flex flex-col gap-3">
-            <a href="#top" className="text-sm text-ink/80" onClick={() => setMobileOpen(false)}>
+            <a
+              href="#top"
+              className="text-sm text-ink/80"
+              onClick={() => setMobileOpen(false)}
+            >
               Home
             </a>
             {SOLUTIONS.map((s) => (
@@ -114,11 +131,11 @@ export function MarketingNavbar() {
                 {link.label}
               </a>
             ))}
-            <Link href="/login" onClick={() => setMobileOpen(false)}>
-              <Button size="sm" className="mt-2 w-full">
+            <Button size="sm" className="mt-2 w-full" asChild>
+              <Link href="/login" onClick={() => setMobileOpen(false)}>
                 Sign in
-              </Button>
-            </Link>
+              </Link>
+            </Button>
           </div>
         </div>
       )}
@@ -128,14 +145,25 @@ export function MarketingNavbar() {
 
 function BellMark() {
   return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+    <svg
+      width="22"
+      height="22"
+      viewBox="0 0 24 24"
+      fill="none"
+      aria-hidden="true"
+    >
       <path
         d="M12 3c-3.5 0-5.5 2.5-5.5 6v3.5L4 16h16l-2.5-3.5V9c0-3.5-2-6-5.5-6Z"
         stroke="#2a655c"
         strokeWidth="1.6"
         strokeLinejoin="round"
       />
-      <path d="M9.5 18.5a2.5 2.5 0 0 0 5 0" stroke="#c99a3d" strokeWidth="1.6" strokeLinecap="round" />
+      <path
+        d="M9.5 18.5a2.5 2.5 0 0 0 5 0"
+        stroke="#c99a3d"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+      />
     </svg>
   );
 }

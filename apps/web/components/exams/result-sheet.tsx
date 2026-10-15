@@ -77,7 +77,7 @@ export function ResultSheet({ initialSessionId }: { initialSessionId?: string })
   const sortHeader = (key: NonNullable<SheetParams["sort"]>, label: string) => (
     <button
       type="button"
-      className="inline-flex items-center gap-1 font-semibold hover:text-brand-700"
+      className="inline-flex items-center gap-1 py-1.5 font-semibold hover:text-brand-700"
       onClick={() => {
         if (sort === key) setDir(dir === "asc" ? "desc" : "asc");
         else { setSort(key); setDir(key === "total" || key === "percent" ? "desc" : "asc"); }

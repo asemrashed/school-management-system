@@ -526,21 +526,36 @@ model Payment {
   @@index([invoiceId])
 }
 
+/// draft = admin's unpublished draft; pending = submitted by staff, awaiting an admin;
+/// published = live; rejected = sent back to the author with a note.
+enum NoticeStatus {
+  draft
+  pending
+  published
+  rejected
+}
+
 model Notice {
-  id          String         @id @default(cuid())
-  title       String
+  id            String         @id @default(cuid())
+  title         String
   /// Sanitized with DOMPurify server-side before write (cms-domain.md).
-  bodyHtml    String
-  audience    NoticeAudience @default(all)
-  publishedAt DateTime?
-  createdBy   User           @relation(fields: [createdById], references: [id])
-  createdById String
-  createdAt   DateTime       @default(now())
-  updatedAt   DateTime       @updatedAt
-  deletedAt   DateTime?
+  bodyHtml      String
+  audience      NoticeAudience @default(all)
+  publishedAt   DateTime?
+  status        NoticeStatus   @default(published)
+  /// Admin who approved / rejected a staff-submitted notice.
+  reviewedById  String?
+  reviewedAt    DateTime?
+  rejectionNote String?
+  createdBy     User           @relation(fields: [createdById], references: [id])
+  createdById   String
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  deletedAt     DateTime?
 
   @@index([audience])
   @@index([publishedAt])
+  @@index([status])
 }
 
 model Event {

@@ -12,8 +12,6 @@ import {
   Label,
   Select,
   Tabs,
-  TabsList,
-  TabsTrigger,
   TabsContent,
   useToast,
 } from "@packages/ui";
@@ -29,9 +27,10 @@ import {
 } from "@/lib/hooks/use-library";
 import { LookupCombobox } from "@/components/forms/lookup-combobox";
 import { ApiError } from "@/lib/api-client";
+import { NoticesPanel } from "@/components/notices/notices-panel";
 import { useUrlTab } from "@/lib/use-url-tab";
 
-const TAB_VALUES = ["catalog", "issues", "sales"] as const;
+const TAB_VALUES = ["catalog", "issues", "sales", "notices"] as const;
 
 export default function LibrarianDashboardPage() {
   const [tab, setTab] = useUrlTab("tab", "catalog", TAB_VALUES);
@@ -39,11 +38,6 @@ export default function LibrarianDashboardPage() {
     <div>
       <PageHeader title="Library" description="Catalog, issue/return, fines and book sales." />
       <Tabs value={tab} onValueChange={setTab}>
-        <TabsList>
-          <TabsTrigger value="catalog">Catalog</TabsTrigger>
-          <TabsTrigger value="issues">Issue / Return</TabsTrigger>
-          <TabsTrigger value="sales">Sales</TabsTrigger>
-        </TabsList>
         <TabsContent value="catalog">
           <CatalogPanel />
         </TabsContent>
@@ -53,6 +47,7 @@ export default function LibrarianDashboardPage() {
         <TabsContent value="sales">
           <SalesPanel />
         </TabsContent>
+        <TabsContent value="notices"><NoticesPanel /></TabsContent>
       </Tabs>
     </div>
   );

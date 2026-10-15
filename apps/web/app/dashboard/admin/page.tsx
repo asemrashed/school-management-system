@@ -20,8 +20,6 @@ import {
   CardTitle,
   CardContent,
   Tabs,
-  TabsList,
-  TabsTrigger,
   TabsContent,
   RichTextEditor,
   useToast,
@@ -58,6 +56,7 @@ import { RoutineAdminPanel } from "@/components/admin/routine-admin-panel";
 import { RoleLimitsPanel } from "@/components/admin/role-limits-panel";
 import { StudentsPanel } from "@/components/admin/students-panel";
 import { WebsitePanel } from "@/components/admin/website-panel";
+import { NoticesPanel } from "@/components/notices/notices-panel";
 import { useUrlTab } from "@/lib/use-url-tab";
 
 const TAB_VALUES = ["users", "students", "setup", "assignments", "routine", "exams", "results", "limits", "notices", "events", "website", "cms", "reports"] as const;
@@ -87,21 +86,6 @@ export default function AdminDashboardPage() {
     <div>
       <PageHeader title="Administration" description="Users, students and admissions, academic setup, website, notices and events." />
       <Tabs value={tab} onValueChange={setTab}>
-        <TabsList>
-          <TabsTrigger value="users">Users & Messaging</TabsTrigger>
-          <TabsTrigger value="students">Students & Admissions</TabsTrigger>
-          <TabsTrigger value="setup">Academic Setup</TabsTrigger>
-          <TabsTrigger value="assignments">Teacher Assignments</TabsTrigger>
-          <TabsTrigger value="routine">Routine</TabsTrigger>
-          <TabsTrigger value="exams">Exams</TabsTrigger>
-          <TabsTrigger value="results">Results</TabsTrigger>
-          {isSuperAdmin && <TabsTrigger value="limits">Role Limits</TabsTrigger>}
-          <TabsTrigger value="notices">Notices</TabsTrigger>
-          <TabsTrigger value="events">Events</TabsTrigger>
-          {canEditWebsite && <TabsTrigger value="website">Website</TabsTrigger>}
-          <TabsTrigger value="cms">CMS Pages</TabsTrigger>
-          <TabsTrigger value="reports">Reports</TabsTrigger>
-        </TabsList>
 
         <TabsContent value="users">
           <UsersAndMessagingPanel />
@@ -322,102 +306,6 @@ function DeviceLimitsCard() {
 }
 
 // --- Notices ---------------------------------------------------------------
-
-const AUDIENCES: NoticeAudience[] = ["all", "parents", "teachers", "students", "staff"];
-
-function NoticesPanel() {
-  const { toast } = useToast();
-  const notices = useNotices();
-  const createNotice = useCreateNotice();
-  const [open, setOpen] = React.useState(false);
-  const [title, setTitle] = React.useState("");
-  const [bodyHtml, setBodyHtml] = React.useState("");
-  const [audience, setAudience] = React.useState<NoticeAudience>("all");
-
-  async function handleCreate(e: React.FormEvent) {
-    e.preventDefault();
-    const parsed = createNoticeSchema.safeParse({ title, bodyHtml, audience, publishNow: true });
-    if (!parsed.success) {
-      toast({ title: "Check the form", description: parsed.error.issues[0]?.message, variant: "error" });
-      return;
-    }
-    try {
-      await createNotice.mutateAsync(parsed.data);
-      toast({ title: "Notice published", variant: "success" });
-      setOpen(false);
-      setTitle("");
-      setBodyHtml("");
-    } catch (err) {
-      const message = err instanceof ApiError ? err.message : "Could not publish the notice.";
-      toast({ title: "Could not publish", description: message, variant: "error" });
-    }
-  }
-
-  return (
-    <div>
-      <PageHeader
-        title="Notice board"
-        description="Publishing sends an email to everyone in the chosen audience."
-        actions={
-          <FormModal
-            open={open}
-            onOpenChange={setOpen}
-            title="New notice"
-            trigger={
-              <Button size="sm">
-                <Plus className="h-4 w-4" /> New notice
-              </Button>
-            }
-          >
-            <form onSubmit={handleCreate} className="flex flex-col gap-4">
-              <div className="flex flex-col gap-1.5">
-                <Label htmlFor="notice-title">Title</Label>
-                <Input id="notice-title" value={title} onChange={(e) => setTitle(e.target.value)} />
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <Label htmlFor="notice-audience">Audience</Label>
-                <Select
-                  id="notice-audience"
-                  value={audience}
-                  onChange={(e) => setAudience(e.target.value as NoticeAudience)}
-                >
-                  {AUDIENCES.map((a) => (
-                    <option key={a} value={a}>
-                      {a}
-                    </option>
-                  ))}
-                </Select>
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <Label>Body</Label>
-                <RichTextEditor value={bodyHtml} onChange={setBodyHtml} />
-              </div>
-              <Button type="submit" disabled={createNotice.isPending} className="mt-2">
-                {createNotice.isPending ? "Publishing..." : "Publish now"}
-              </Button>
-            </form>
-          </FormModal>
-        }
-      />
-      <div className="flex flex-col gap-3">
-        {(notices.data?.items ?? []).map((n) => (
-          <Card key={n.id}>
-            <CardContent className="pt-5">
-              <div className="flex items-center justify-between">
-                <p className="text-sm font-semibold text-slate-800">{n.title}</p>
-                <Badge variant="muted">{n.audience}</Badge>
-              </div>
-              <div className="prose prose-sm mt-2 max-w-none text-slate-600" dangerouslySetInnerHTML={{ __html: n.bodyHtml }} />
-            </CardContent>
-          </Card>
-        ))}
-        {notices.data?.items.length === 0 && (
-          <p className="py-8 text-center text-sm text-slate-400">No notices published yet.</p>
-        )}
-      </div>
-    </div>
-  );
-}
 
 // --- Events ------------------------------------------------------------
 

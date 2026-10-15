@@ -23,7 +23,7 @@ describe("public site payload", () => {
     expect(res.status).toBe(200);
     expect(res.body.general.schoolName).toBe("Test School");
     expect(res.body.general.nav).toHaveLength(5);
-    expect(res.body.home.features.length).toBeGreaterThan(0);
+    expect(res.body.home.highlights.length).toBeGreaterThan(0);
     expect(res.body.admission.open).toBe(true);
     expect(res.body.classes).toEqual([{ id: w.cls.id, name: "Class 6" }]);
   });
@@ -50,7 +50,7 @@ describe("site settings (admin)", () => {
     await db().siteSetting.update({ where: { key: "home" }, data: { value: { heroTitle: "Old row" } } });
     const site = (await anon().get("/public/site")).body;
     expect(site.home.heroTitle).toBe("Old row");
-    expect(site.home.features.length).toBeGreaterThan(0);
+    expect(site.home.highlights.length).toBeGreaterThan(0);
   });
 
   it("rejects unsafe URLs, unknown keys, and non-admins", async () => {

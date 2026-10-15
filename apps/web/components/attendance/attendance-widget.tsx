@@ -63,18 +63,19 @@ export function AttendanceWidget({ sectionId, date }: { sectionId: string; date:
         {roster.data.items.map((student) => {
           const current = statuses[student.id] ?? "present";
           return (
-            <div key={student.id} className="flex items-center justify-between gap-3 p-3">
+            <div key={student.id} className="flex flex-col gap-2 p-3 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
               <div>
                 <p className="text-sm font-medium text-slate-800">{student.name}</p>
                 {student.rollNumber && <p className="text-xs text-slate-400">Roll {student.rollNumber}</p>}
               </div>
-              <div className="flex gap-1">
+              <div className="flex flex-wrap gap-1.5 sm:gap-1">
                 {STATUS_OPTIONS.map((opt) => (
                   <button
                     key={opt.value}
                     type="button"
+                    aria-pressed={current === opt.value}
                     onClick={() => setStatuses((prev) => ({ ...prev, [student.id]: opt.value }))}
-                    className={`flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium transition-colors ${
+                    className={`flex min-h-9 items-center gap-1 rounded-md px-3 py-1.5 text-xs font-medium transition-colors sm:min-h-0 sm:px-2 sm:py-1 ${
                       current === opt.value
                         ? "bg-brand-600 text-white"
                         : "bg-slate-100 text-slate-500 hover:bg-slate-200"

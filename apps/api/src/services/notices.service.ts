@@ -29,30 +29,76 @@ export function readableAudiences(role: string): string[] | null {
   }
 }
 
-export async function createAndMaybePublishNotice(input: {
+/** Roles whose notices go live immediately; everyone else's wait for an admin. */
+export const DIRECT_PUBLISH_ROLES = ["super_admin", "admin"];
+
+/**
+ * Admin / super admin: publish now (or keep a draft).
+ * Coordinator / teacher / librarian: ALWAYS `pending` — `publishNow` from the
+ * client is ignored, so a staff member can never publish by tampering with it.
+ */
+export async function createNotice(input: {
   title: string;
   bodyHtml: string;
   audience: string;
   publishNow: boolean;
   createdById: string;
+  authorRole: string;
 }) {
-  const cleanHtml = sanitizeHtml(input.bodyHtml);
+  const direct = DIRECT_PUBLISH_ROLES.includes(input.authorRole);
+  const status = !direct ? "pending" : input.publishNow ? "published" : "draft";
 
   const notice = await prisma.notice.create({
     data: {
       title: input.title,
-      bodyHtml: cleanHtml,
+      bodyHtml: sanitizeHtml(input.bodyHtml),
       audience: input.audience as any,
       createdById: input.createdById,
-      publishedAt: input.publishNow ? new Date() : null,
+      status,
+      publishedAt: status === "published" ? new Date() : null,
     },
   });
 
-  if (input.publishNow) {
-    await publishNoticeNotifications(notice.id);
-  }
-
+  if (status === "published") await publishNoticeNotifications(notice.id);
   return notice;
+}
+
+/** Author fixes a pending / rejected notice; it goes back to the approval queue. */
+export async function resubmitNotice(id: string, input: { title: string; bodyHtml: string; audience: string }) {
+  return prisma.notice.update({
+    where: { id },
+    data: {
+      title: input.title,
+      bodyHtml: sanitizeHtml(input.bodyHtml),
+      audience: input.audience as any,
+      status: "pending",
+      rejectionNote: null,
+      reviewedById: null,
+      reviewedAt: null,
+    },
+  });
+}
+
+/**
+ * Admin approval. Claims the row with a compare-and-set on `status` so two
+ * admins clicking at once publish (and email everyone) exactly once.
+ */
+export async function approveNotice(id: string, reviewerId: string): Promise<boolean> {
+  const claimed = await prisma.notice.updateMany({
+    where: { id, status: "pending", deletedAt: null },
+    data: { status: "published", publishedAt: new Date(), reviewedById: reviewerId, reviewedAt: new Date(), rejectionNote: null },
+  });
+  if (claimed.count === 0) return false;
+  await publishNoticeNotifications(id);
+  return true;
+}
+
+export async function rejectNotice(id: string, reviewerId: string, note: string): Promise<boolean> {
+  const claimed = await prisma.notice.updateMany({
+    where: { id, status: "pending", deletedAt: null },
+    data: { status: "rejected", reviewedById: reviewerId, reviewedAt: new Date(), rejectionNote: note, publishedAt: null },
+  });
+  return claimed.count > 0;
 }
 
 /**

@@ -4,6 +4,13 @@ export const NOTICE_AUDIENCES = ["all", "parents", "teachers", "students", "staf
 export const noticeAudienceSchema = z.enum(NOTICE_AUDIENCES);
 export type NoticeAudience = z.infer<typeof noticeAudienceSchema>;
 
+export const noticeStatusSchema = z.enum(["draft", "pending", "published", "rejected"]);
+export type NoticeStatus = z.infer<typeof noticeStatusSchema>;
+
+/** Roles that may submit a notice. Super admin / admin publish directly; the rest need an admin's approval. */
+export const NOTICE_AUTHOR_ROLES = ["super_admin", "admin", "coordinator", "teacher", "librarian"] as const;
+export const NOTICE_DIRECT_PUBLISH_ROLES = ["super_admin", "admin"] as const;
+
 export const noticeDtoSchema = z.object({
   id: z.string(),
   title: z.string(),
@@ -12,6 +19,9 @@ export const noticeDtoSchema = z.object({
   publishedAt: z.string().nullable(),
   createdByName: z.string(),
   createdAt: z.string(),
+  status: noticeStatusSchema,
+  rejectionNote: z.string().nullable(),
+  reviewedByName: z.string().nullable(),
 });
 export type NoticeDto = z.infer<typeof noticeDtoSchema>;
 
@@ -24,6 +34,14 @@ export const createNoticeSchema = z.object({
   publishNow: z.boolean().default(true),
 });
 export type CreateNoticeInput = z.infer<typeof createNoticeSchema>;
+
+/** Author edits a pending / rejected notice (re-submits it for approval). */
+export const updateNoticeSchema = createNoticeSchema.omit({ publishNow: true });
+export type UpdateNoticeInput = z.infer<typeof updateNoticeSchema>;
+
+export const rejectNoticeSchema = z.object({
+  note: z.string().trim().min(3, "Tell the author what to change.").max(500),
+});
 
 export const eventDtoSchema = z.object({
   id: z.string(),

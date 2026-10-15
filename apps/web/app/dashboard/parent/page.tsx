@@ -17,8 +17,6 @@ import {
   Badge,
   FormModal,
   Tabs,
-  TabsList,
-  TabsTrigger,
   TabsContent,
   EmptyState,
   useToast,
@@ -45,15 +43,6 @@ export default function ParentDashboardPage() {
       <PageHeader title="Parent dashboard" description="How your child is doing, fees, results, notices and support." />
       <ChildPicker items={child.items} value={child.studentId} onChange={child.setSelected} />
       <Tabs value={tab} onValueChange={setTab}>
-        <TabsList>
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="performance">Performance</TabsTrigger>
-          <TabsTrigger value="routine">Routine</TabsTrigger>
-          <TabsTrigger value="fees">Fees</TabsTrigger>
-          <TabsTrigger value="results">Results</TabsTrigger>
-          <TabsTrigger value="notices">Notices</TabsTrigger>
-          <TabsTrigger value="tickets">Support tickets</TabsTrigger>
-        </TabsList>
         <TabsContent value="overview"><OverviewTiles studentId={child.studentId} /></TabsContent>
         <TabsContent value="performance"><PerformanceView studentId={child.studentId} /></TabsContent>
         <TabsContent value="routine"><MyRoutine role="parent" /></TabsContent>

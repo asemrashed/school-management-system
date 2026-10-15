@@ -40,7 +40,7 @@ export async function readPublicSite(): Promise<PublicSite> {
     }),
     prisma.galleryImage.findMany({ where: { deletedAt: null }, orderBy: [{ sortOrder: "asc" }, { createdAt: "desc" }] }),
     prisma.notice.findMany({
-      where: { deletedAt: null, publishedAt: { not: null }, audience: "all" },
+      where: { deletedAt: null, status: "published", publishedAt: { not: null }, audience: "all" },
       orderBy: { publishedAt: "desc" },
       take: 5,
     }),

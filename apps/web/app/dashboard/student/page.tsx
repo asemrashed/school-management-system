@@ -15,8 +15,6 @@ import {
   Label,
   Textarea,
   Tabs,
-  TabsList,
-  TabsTrigger,
   TabsContent,
   EmptyState,
   LoadingSkeleton,
@@ -41,16 +39,6 @@ export default function StudentDashboardPage() {
       <PaymentReturnNotice />
       <PageHeader title="My learning" description="Notices, materials, assignments and results." />
       <Tabs value={tab} onValueChange={setTab}>
-        <TabsList>
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="performance">Performance</TabsTrigger>
-          <TabsTrigger value="routine">Routine</TabsTrigger>
-          <TabsTrigger value="notices">Notices</TabsTrigger>
-          <TabsTrigger value="resources">Materials</TabsTrigger>
-          <TabsTrigger value="assignments">Assignments</TabsTrigger>
-          <TabsTrigger value="results">Results</TabsTrigger>
-          <TabsTrigger value="fees">Fees</TabsTrigger>
-        </TabsList>
         <TabsContent value="overview"><OverviewTiles studentId={me.studentId} /></TabsContent>
         <TabsContent value="performance"><PerformanceView studentId={me.studentId} /></TabsContent>
         <TabsContent value="routine">
@@ -110,9 +98,9 @@ function ResourcesPanel() {
               <p className="text-sm font-semibold text-slate-800">{r.title}</p>
               <p className="text-xs text-slate-400">{r.subjectName} · {r.kind.replace("_", " ")}</p>
             </div>
-            <a href={r.url} target="_blank" rel="noreferrer">
-              <Button variant="outline" size="sm">Open</Button>
-            </a>
+            <Button variant="outline" size="sm" asChild>
+<a href={r.url} target="_blank" rel="noreferrer">Open</a>
+</Button>
           </CardContent>
         </Card>
       ))}

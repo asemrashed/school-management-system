@@ -12,8 +12,6 @@ import {
   Label,
   Select,
   Tabs,
-  TabsList,
-  TabsTrigger,
   TabsContent,
   useToast,
 } from "@packages/ui";
@@ -22,9 +20,10 @@ import { FeeStructuresPanel, GenerateFeesPanel, InvoicesPanel } from "@/componen
 import { LookupCombobox } from "@/components/forms/lookup-combobox";
 import { useSalaries, useCreateSalary, useMarkSalaryPaid } from "@/lib/hooks/use-salary";
 import { ApiError } from "@/lib/api-client";
+import { NoticesPanel } from "@/components/notices/notices-panel";
 import { useUrlTab } from "@/lib/use-url-tab";
 
-const TAB_VALUES = ["invoices", "generate", "structures", "salaries"] as const;
+const TAB_VALUES = ["invoices", "generate", "structures", "salaries", "notices"] as const;
 
 export default function AccountantDashboardPage() {
   const [tab, setTab] = useUrlTab("tab", "invoices", TAB_VALUES);
@@ -32,12 +31,6 @@ export default function AccountantDashboardPage() {
     <div>
       <PageHeader title="Fees" description="Fee structures, invoices, payments and salaries." />
       <Tabs value={tab} onValueChange={setTab}>
-        <TabsList>
-          <TabsTrigger value="invoices">Invoices</TabsTrigger>
-          <TabsTrigger value="generate">Generate monthly fees</TabsTrigger>
-          <TabsTrigger value="structures">Fee structures</TabsTrigger>
-          <TabsTrigger value="salaries">Salaries</TabsTrigger>
-        </TabsList>
         <TabsContent value="invoices">
           <InvoicesPanel />
         </TabsContent>
@@ -50,6 +43,7 @@ export default function AccountantDashboardPage() {
         <TabsContent value="salaries">
           <SalariesPanel />
         </TabsContent>
+        <TabsContent value="notices"><NoticesPanel /></TabsContent>
       </Tabs>
     </div>
   );

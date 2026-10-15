@@ -163,21 +163,29 @@ function HomeForm() {
             {d.heroImageUrl && <Button type="button" size="sm" variant="outline" onClick={() => set("heroImageUrl", "")}>Remove</Button>}
           </div>
         </Field>
+        <Field id="h-hl-t" label="“Why choose us” section title"><Input id="h-hl-t" value={d.highlightsTitle} onChange={(e) => set("highlightsTitle", e.target.value)} /></Field>
         <Field id="h-about-t" label="About section title"><Input id="h-about-t" value={d.aboutTitle} onChange={(e) => set("aboutTitle", e.target.value)} /></Field>
         <Field id="h-about" label="About section text"><textarea id="h-about" rows={4} className="rounded-md border border-slate-300 px-3 py-2 text-sm" value={d.aboutText} onChange={(e) => set("aboutText", e.target.value)} /></Field>
+        <Field id="h-about-img" label="About section image">
+          <div className="flex items-center gap-3">
+            {d.aboutImageUrl && <img src={d.aboutImageUrl} alt="About" className="h-16 w-28 rounded object-cover" />}
+            <ImageUpload label={d.aboutImageUrl ? "Replace image" : "Upload image"} onUploaded={(url) => set("aboutImageUrl", url)} />
+            {d.aboutImageUrl && <Button type="button" size="sm" variant="outline" onClick={() => set("aboutImageUrl", "")}>Remove</Button>}
+          </div>
+        </Field>
         <div>
-          <p className="mb-2 text-sm font-medium text-slate-700">“How our school management system helps” cards</p>
+          <p className="mb-2 text-sm font-medium text-slate-700">“Why families choose us” cards</p>
           <div className="flex flex-col gap-3">
-            {d.features.map((ft, i) => (
+            {d.highlights.map((ft, i) => (
               <div key={i} className="flex items-start gap-2">
                 <div className="flex flex-1 flex-col gap-2">
-                  <Input aria-label={`Card ${i + 1} title`} value={ft.title} onChange={(e) => set("features", d.features.map((x, j) => (j === i ? { ...x, title: e.target.value } : x)))} />
-                  <Input aria-label={`Card ${i + 1} text`} value={ft.text} onChange={(e) => set("features", d.features.map((x, j) => (j === i ? { ...x, text: e.target.value } : x)))} />
+                  <Input aria-label={`Card ${i + 1} title`} value={ft.title} onChange={(e) => set("highlights", d.highlights.map((x, j) => (j === i ? { ...x, title: e.target.value } : x)))} />
+                  <Input aria-label={`Card ${i + 1} text`} value={ft.text} onChange={(e) => set("highlights", d.highlights.map((x, j) => (j === i ? { ...x, text: e.target.value } : x)))} />
                 </div>
-                <Button type="button" size="sm" variant="outline" aria-label={`Remove card ${i + 1}`} onClick={() => set("features", d.features.filter((_, j) => j !== i))}><Trash2 className="h-4 w-4" /></Button>
+                <Button type="button" size="sm" variant="outline" aria-label={`Remove card ${i + 1}`} onClick={() => set("highlights", d.highlights.filter((_, j) => j !== i))}><Trash2 className="h-4 w-4" /></Button>
               </div>
             ))}
-            {d.features.length < 8 && <Button type="button" size="sm" variant="outline" className="self-start" onClick={() => set("features", [...d.features, { title: "New card", text: "" }])}><Plus className="h-4 w-4" /> Add card</Button>}
+            {d.highlights.length < 8 && <Button type="button" size="sm" variant="outline" className="self-start" onClick={() => set("highlights", [...d.highlights, { title: "New card", text: "" }])}><Plus className="h-4 w-4" /> Add card</Button>}
           </div>
         </div>
         <div className="flex flex-wrap gap-6 text-sm">

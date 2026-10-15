@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePublicSite } from "@/lib/hooks/use-site";
 
-/** The single-page Home: hero, about, how the system helps, notices, teachers, gallery, call to action. */
+/** School home: hero, notices, why choose us, about, teachers, gallery, admission call to action. All content is edited in Admin → Website. */
 export default function HomePage() {
   const { data: site, isLoading, isError } = usePublicSite();
   if (isLoading) return <div className="mx-auto max-w-6xl px-4 py-24 text-center text-ink/60">Loading…</div>;
@@ -34,18 +34,12 @@ export default function HomePage() {
         </section>
       )}
 
-      <section id="about" className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
-        <h2 className="font-serif text-3xl font-semibold">{home.aboutTitle}</h2>
-        <p className="mt-4 max-w-3xl whitespace-pre-line text-lg leading-relaxed text-ink/75">{home.aboutText}</p>
-        <Link href="/about" className="mt-4 inline-block text-sm font-medium text-brand-700 hover:underline">Read more about us →</Link>
-      </section>
-
-      {home.features.length > 0 && (
-        <section className="bg-white/60 py-16">
+      {home.highlights.length > 0 && (
+        <section id="why-us" className="bg-white/60 py-16">
           <div className="mx-auto max-w-6xl px-4 sm:px-6">
-            <h2 className="font-serif text-3xl font-semibold">How our school management system helps</h2>
+            <h2 className="font-serif text-3xl font-semibold">{home.highlightsTitle}</h2>
             <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-              {home.features.map((f, i) => (
+              {home.highlights.map((f, i) => (
                 <div key={i} className="rounded-2xl border border-ink/10 bg-paper p-5">
                   <span className="font-serif text-2xl text-brass-500">{String(i + 1).padStart(2, "0")}</span>
                   <h3 className="mt-2 font-semibold">{f.title}</h3>
@@ -56,6 +50,17 @@ export default function HomePage() {
           </div>
         </section>
       )}
+
+      <section id="about" className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
+        <div className={`grid items-center gap-10 ${home.aboutImageUrl ? "md:grid-cols-2" : ""}`}>
+          <div>
+            <h2 className="font-serif text-3xl font-semibold">{home.aboutTitle}</h2>
+            <p className="mt-4 max-w-3xl whitespace-pre-line text-lg leading-relaxed text-ink/75">{home.aboutText}</p>
+            <Link href="/about" className="mt-4 inline-block text-sm font-medium text-brand-700 hover:underline">Read more about us →</Link>
+          </div>
+          {home.aboutImageUrl && <img src={home.aboutImageUrl} alt="" loading="lazy" className="aspect-[4/3] w-full rounded-2xl object-cover" />}
+        </div>
+      </section>
 
       {home.showTeachers && site.teachers.length > 0 && (
         <section className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
@@ -79,8 +84,8 @@ export default function HomePage() {
             <h2 className="font-serif text-3xl font-semibold">Life at our school</h2>
             <Link href="/gallery" className="text-sm font-medium text-brand-700 hover:underline">Full gallery →</Link>
           </div>
-          <div className="mt-6 grid grid-cols-2 gap-3 md:grid-cols-4">
-            {site.gallery.slice(0, 8).map((g) => <img key={g.id} src={g.url} alt={g.caption ?? "School photo"} loading="lazy" className="aspect-[4/3] w-full rounded-xl object-cover" />)}
+          <div className="mt-6 grid grid-cols-2 gap-3 md:grid-cols-3">
+            {site.gallery.slice(0, 6).map((g) => <img key={g.id} src={g.url} alt={g.caption ?? "School photo"} loading="lazy" className="aspect-[4/3] w-full rounded-xl object-cover" />)}
           </div>
         </section>
       )}

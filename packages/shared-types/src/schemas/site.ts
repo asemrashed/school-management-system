@@ -45,8 +45,10 @@ export const homeSettingsSchema = z.object({
   heroPrimaryLabel: text(30),
   aboutTitle: text(120),
   aboutText: text(1200),
-  /** "How our school management system helps modern schooling" cards. */
-  features: z.array(z.object({ title: text(60).min(1), text: text(240) })).max(8),
+  aboutImageUrl: safeUrl,
+  highlightsTitle: text(120),
+  /** "Why families choose us" cards. */
+  highlights: z.array(z.object({ title: text(60).min(1), text: text(240) })).max(8),
   showTeachers: z.boolean(),
   showGallery: z.boolean(),
   showNotices: z.boolean(),
@@ -94,12 +96,15 @@ export const DEFAULT_SITE = {
     heroPrimaryLabel: "Apply for admission",
     aboutTitle: "About our school",
     aboutText: "We help every child build a strong foundation for learning and for life.",
-    features: [
-      { title: "Live progress for parents", text: "Attendance, results and homework are visible to families the same day." },
-      { title: "Clear class routines", text: "Students and teachers always know what is next — the timetable builds itself." },
-      { title: "Easy fee payment", text: "See dues and pay online or at the office, with receipts for every payment." },
-      { title: "Learning materials anywhere", text: "Past papers, slides and recorded classes are one tap away." },
+    aboutImageUrl: "",
+    highlightsTitle: "Why families choose us",
+    highlights: [
+      { title: "Caring, qualified teachers", text: "Small classes where every child is known by name and encouraged to ask questions." },
+      { title: "Strong academics", text: "A balanced English-medium curriculum with regular assessment and clear feedback." },
+      { title: "Safe, happy campus", text: "A secure, friendly environment with sports, arts and clubs beyond the classroom." },
+      { title: "Partnership with parents", text: "Regular updates, open communication and easy online access to progress and fees." },
     ],
+
     showTeachers: true,
     showGallery: true,
     showNotices: true,

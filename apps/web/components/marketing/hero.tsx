@@ -3,7 +3,10 @@ import { Button } from "@packages/ui";
 
 export function Hero() {
   return (
-    <section id="top" className="mx-auto max-w-6xl px-4 pb-16 pt-14 sm:px-6 sm:pt-20">
+    <section
+      id="top"
+      className="mx-auto max-w-6xl px-4 pb-16 pt-14 sm:px-6 sm:pt-20"
+    >
       <div className="grid grid-cols-1 items-center gap-12 lg:grid-cols-[1.1fr_0.9fr]">
         <div>
           <h1 className="max-w-xl font-serif text-[2.5rem] font-semibold leading-[1.1] text-ink sm:text-5xl">
@@ -15,16 +18,16 @@ export function Hero() {
             dashboard made for every admin, teacher, parent and student.
           </p>
           <div className="mt-8 flex flex-wrap items-center gap-4">
-            <a href="#contact">
-              <Button size="lg" className="bg-brass-400 text-ink hover:bg-brass-500">
-                Book a demo
-              </Button>
-            </a>
-            <Link href="/login">
-              <Button size="lg" variant="outline">
-                Sign in
-              </Button>
-            </Link>
+            <Button
+              size="lg"
+              className="bg-brass-400 text-ink hover:bg-brass-500"
+              asChild
+            >
+              <a href="#contact">Book a demo</a>
+            </Button>
+            <Button size="lg" variant="outline" asChild>
+              <Link href="/login">Sign in</Link>
+            </Button>
           </div>
           <p className="mt-6 text-sm text-ink/50">
             Built with Green Valley English Medium School, Dhaka.
@@ -51,7 +54,9 @@ function MarksheetMock() {
   return (
     <div className="rotate-1 border border-ink/15 bg-white shadow-[6px_6px_0_0_rgba(28,32,31,0.08)]">
       <div className="flex items-center justify-between border-b border-ink/10 bg-brand-700 px-4 py-3">
-        <span className="font-serif text-sm text-white">Class 6 — Section A</span>
+        <span className="font-serif text-sm text-white">
+          Class 6 — Section A
+        </span>
         <span className="text-xs text-white/70">Mid-term · Mathematics</span>
       </div>
       <table className="w-full text-left text-sm">
@@ -69,7 +74,13 @@ function MarksheetMock() {
               <td className="px-4 py-2.5 text-ink/60">{r.roll}</td>
               <td className="px-4 py-2.5 text-ink">{r.name}</td>
               <td className="px-4 py-2.5">
-                <span className={r.status === "Absent" ? "text-red-600" : "text-brand-600"}>{r.status}</span>
+                <span
+                  className={
+                    r.status === "Absent" ? "text-red-600" : "text-brand-600"
+                  }
+                >
+                  {r.status}
+                </span>
               </td>
               <td className="px-4 py-2.5 text-ink/80">{r.mark}</td>
             </tr>

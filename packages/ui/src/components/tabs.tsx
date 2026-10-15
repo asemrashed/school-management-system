@@ -9,7 +9,7 @@ export const Tabs = RadixTabs.Root;
 export function TabsList({ className, ...props }: React.ComponentProps<typeof RadixTabs.List>) {
   return (
     <RadixTabs.List
-      className={cn("inline-flex items-center gap-1 rounded-md bg-slate-100 p-1", className)}
+      className={cn("flex max-w-full items-center gap-1 overflow-x-auto rounded-md bg-slate-100 p-1 sm:inline-flex", className)}
       {...props}
     />
   );
@@ -19,7 +19,7 @@ export function TabsTrigger({ className, ...props }: React.ComponentProps<typeof
   return (
     <RadixTabs.Trigger
       className={cn(
-        "rounded-sm px-3 py-1.5 text-sm font-medium text-slate-600 transition-colors",
+        "shrink-0 whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium text-slate-600 transition-colors",
         "data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-sm",
         className
       )}

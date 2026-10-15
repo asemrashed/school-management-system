@@ -105,3 +105,19 @@ Teachers were scoped by *section*, so two teachers of one section saw each other
 - **Tabs live in the URL**: `?tab=students`, nested `&sub=rooms` (Academic Setup, Routine, Website). Refresh, back/forward and shared links keep the page. Unknown / not-permitted values fall back to the default tab. Hook: `apps/web/lib/use-url-tab.ts`. The dashboard layout wraps pages in `<Suspense>` (needed by `useSearchParams` in static builds).
 - After a payment gateway return the student/parent lands on the Fees tab.
 - `TabsTrigger` now honours a custom `className`.
+
+## Part 4 — buttons & responsiveness
+- Root cause of cramped buttons ("Contact us for pricing", "New assignment"): `Button` used a fixed height (`h-8`) so a long label wrapped/clipped, and header action rows (`PageHeader`) were `shrink-0` with no wrapping, squeezing the button on narrow screens.
+- `Button` now uses `min-h-*` + vertical padding, wraps long labels, is a 36px tap target on phones (32px from `sm` up). New `asChild` prop renders the styles onto a link (`<Button asChild><Link href=…/></Button>`) — replaces the invalid `<a><Button/></a>` nesting used in the marketing page, hero, footer, navbar, contact section and student resources.
+- `PageHeader` actions wrap and right-align from `sm` up; title breaks long words.
+- Tabs bars scroll horizontally instead of overflowing the page; phones get a scrollable nav strip (there was no sidebar on phones).
+- Attendance Present/Absent/Late/Excused buttons: 36px on phones, stack under the name, no sideways page scroll.
+- Verified by an automated sweep of every dashboard tab for 7 roles at 375 / 768 / 1280px: no button clipped, no text overflow, no sideways page scroll.
+
+## Part 5 — notices with approval
+- New `NoticeStatus` (draft / pending / published / rejected) + review fields on `Notice`. **Run `npm run prisma:migrate` (name: notice_approval).**
+- Coordinator, teacher and librarian can write notices; they ALWAYS land as `pending` (a tampered `publishNow:true` is ignored). Only admin / super admin approve or send back (with a note); approval publishes once (compare-and-set) and emails the audience. Admin notices publish directly. Nobody approves their own. Authors see their notices' status and can edit + resubmit a pending / rejected one. Accountant: read-only.
+- Live board, public site and homepage only ever show `status = published`.
+- New shared `NoticesPanel` (`components/notices/`) used by admin, teacher, librarian, accountant and coordinator (Notices tab).
+- Endpoints: `GET /engagement/notices/mine`, `GET /engagement/notices/pending`, `PATCH /engagement/notices/:id`, `POST /engagement/notices/:id/approve|reject`.
+- Tests: `tests/21-notice-approval.test.ts`.

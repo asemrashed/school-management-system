@@ -22,7 +22,7 @@ export async function getPublicPage(req: Request, res: Response) {
  * notices any logged-in user sees, just without requiring a session. */
 export async function listPublicNotices(_req: Request, res: Response) {
   const rows = await prisma.notice.findMany({
-    where: { deletedAt: null, publishedAt: { not: null }, audience: "all" },
+    where: { deletedAt: null, status: "published", publishedAt: { not: null }, audience: "all" },
     orderBy: { publishedAt: "desc" },
     take: 30,
   });
